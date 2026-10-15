@@ -1,0 +1,161 @@
+@import "tailwindcss";
+@import "@drink/ui-tokens/tokens.css";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Mokoto is self-hosted (not on Google Fonts). Drop the licensed file at public/fonts/Mokoto.woff2.
+   Until then the display face falls back to Open Sans heavy caps. */
+@font-face {
+  font-family: "Mokoto";
+  src: url("/fonts/Mokoto.woff2") format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-elevated: var(--bg-elevated);
+  --color-surface: var(--surface);
+  --color-hover: var(--surface-hover);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-fg: var(--text);
+  --color-fg-2: var(--text-2);
+  --color-fg-3: var(--text-3);
+  --color-accent: var(--accent);
+  --color-accent-press: var(--accent-press);
+  --color-accent-fg: var(--accent-text);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-on-accent: var(--on-accent);
+  --color-success: var(--success);
+  --color-success-subtle: var(--success-subtle);
+  --color-warning: var(--warning);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-logo: var(--logo-tile);
+
+  --font-sans: var(--font-open-sans), system-ui, sans-serif;
+  --font-display: "Mokoto", var(--font-open-sans), system-ui, sans-serif;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  --shadow-card: var(--shadow-card);
+  --shadow-sheet: var(--shadow-sheet);
+
+  --text-display: 28px;
+  --text-heading: 20px;
+  --text-heading--line-height: 28px;
+  --text-subhead: 16px;
+  --text-subhead--line-height: 24px;
+  --text-body: 15px;
+  --text-body--line-height: 24px;
+  --text-label: 13px;
+  --text-label--line-height: 18px;
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    text-size-adjust: 100%;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 24px;
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+  ::selection {
+    background: var(--accent-subtle);
+  }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+  }
+}
+
+@layer components {
+  .font-display {
+    font-family: var(--font-display);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+  .money {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  .hatched {
+    background-image: repeating-linear-gradient(
+      135deg,
+      var(--border) 0 1px,
+      transparent 1px 8px
+    );
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .skeleton {
+    background: linear-gradient(90deg, var(--surface-hover) 0%, var(--border) 50%, var(--surface-hover) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.2s linear infinite;
+  }
+  .enter {
+    animation: rise 200ms ease-out both;
+  }
+  .pop-in {
+    animation: pop 200ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  }
+  .pulse-once {
+    animation: pulse-bg 1s ease-out;
+  }
+  .tap:active {
+    transform: scale(0.98);
+    transition: transform 100ms;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    background: var(--surface-hover);
+  }
+}
+
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pop {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pulse-bg {
+  from { background-color: var(--accent-subtle); }
+  to { background-color: transparent; }
+}
+
+/* vaul drawer */
+[data-vaul-drawer] {
+  transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+}

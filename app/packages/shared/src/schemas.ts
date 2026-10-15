@@ -1,0 +1,138 @@
+import { z } from "zod";
+import { COLOURS, HEALTH_QUESTIONS, LOCATIONS, SOURCES } from "./constants";
+import { isValidMpesaCode } from "./mpesa";
+import { normalizeKenyanPhone } from "./phone";
+
+/**
+ * Shared validation — the same schemas run in the browser (react-hook-form)
+ * and inside Convex mutations, so the server is never more lenient than the UI.
+ */
+
+const kes = z.number().int("Whole shillings only").nonnegative();
+const positiveKes = z.number().int("Whole shillings only").positive("Enter an amount");
+
+export const phoneSchema = z
+  .string()
+  .trim()
+  .transform((v, ctx) => {
+    const n = normalizeKenyanPhone(v);
+    if (!n) {
+      ctx.addIssue({ code: "custom", message: "Enter a Kenyan mobile number, e.g. 0712 345 678" });
+      return z.NEVER;
+    }
+    return n;
+  });
+
+const optionalText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .optional()
+    .transform((v) => (v ? v : undefined));
+
+export const dateOfBirthSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD");
+
+export const clientInputSchema = z.object({
+  fullName: z.string().trim().min(2, "Enter the client's full name").max(80),
+  phone: phoneSchema,
+  email: z.union([z.literal(""), z.email("Enter a valid email")]).optional().transform((v) => v || undefined),
+  instagram: optionalText(40).transform((v) => v?.replace(/^@/, "").toLowerCase()),
+  dateOfBirth: z.union([z.literal(""), dateOfBirthSchema]).optional().transform((v) => v || undefined),
+  notes: optionalText(2000),
+});
+export type ClientInput = z.input<typeof clientInputSchema>;
+
+export const tattooInputSchema = z.object({
+  description: z.string().trim().min(2, "Describe the tattoo").max(500),
+  placement: z.string().trim().min(2, "Where on the body?").max(80),
+  widthCm: z.number().positive().max(200).optional(),
+  heightCm: z.number().positive().max(200).optional(),
+  style: optionalText(40),
+  colour: z.enum(COLOURS),
+});
+export type TattooInput = z.input<typeof tattooInputSchema>;
+
+export const paymentMethodSchema = z.enum(["mpesa", "cash"]);
+
+export const paymentInputSchema = z
+  .object({
+    method: paymentMethodSchema,
+    amountKes: positiveKes,
+    mpesaCode: z.string().trim().toUpperCase().optional(),
+    mpesaRawMessage: z.string().max(1000).optional(),
+    payerName: optionalText(80),
+    payerPhone: optionalText(20),
+    paidAt: z.number().optional(),
+  })
+  .superRefine((p, ctx) => {
+    if (p.method === "mpesa") {
+      if (!p.mpesaCode || !isValidMpesaCode(p.mpesaCode)) {
+        ctx.addIssue({ code: "custom", path: ["mpesaCode"], message: "M-Pesa codes are 10 letters and numbers" });
+      }
+    }
+  });
+export type PaymentInput = z.input<typeof paymentInputSchema>;
+
+export const scheduleInputSchema = z.object({
+  startAt: z.number().int(),
+  durationMin: z.number().int().min(15, "At least 15 minutes").max(12 * 60, "Max 12 hours"),
+  location: z.enum(LOCATIONS),
+  locationNote: optionalText(80),
+});
+
+export const bookingCreateSchema = z.object({
+  clientId: z.string().optional(),
+  client: clientInputSchema.optional(),
+  tattoo: tattooInputSchema,
+  schedule: scheduleInputSchema,
+  quotedPriceKes: positiveKes,
+  source: z.enum(SOURCES.map((s) => s.value) as [string, ...string[]]).optional(),
+  projectId: z.string().optional(),
+  deposit: paymentInputSchema,
+  overrideOverlap: z.boolean().optional(),
+});
+
+export const healthAnswersSchema = z.object(
+  Object.fromEntries(HEALTH_QUESTIONS.map((q) => [q.key, z.boolean()])) as Record<
+    (typeof HEALTH_QUESTIONS)[number]["key"],
+    z.ZodBoolean
+  >,
+).extend({ details: optionalText(1000) });
+export type HealthAnswers = z.infer<typeof healthAnswersSchema>;
+
+export const consentInputSchema = z.object({
+  confirmedAdult: z.literal(true, { error: "You must be 18 or older" }),
+  healthAnswers: healthAnswersSchema,
+  aftercareAck: z.literal(true, { error: "Please confirm you've read the aftercare guide" }),
+  photoPermission: z.boolean(),
+  dataProcessingConsent: z.literal(true, { error: "We need your consent to store your details" }),
+  signatureName: z.string().trim().min(3, "Type your full name").max(80),
+});
+export type ConsentInput = z.input<typeof consentInputSchema>;
+
+export const feedbackInputSchema = z.object({
+  rating: z.number().int().min(1).max(5),
+  comment: optionalText(2000),
+});
+
+export const settingsInputSchema = z.object({
+  depositPercent: z.number().int().min(5).max(100),
+  minDepositKes: kes.optional(),
+  rescheduleLimit: z.number().int().min(0).max(10),
+  reminderHourDayBefore: z.number().int().min(0).max(23),
+  artistDigestHour: z.number().int().min(0).max(23),
+  quietHoursStart: z.number().int().min(0).max(23),
+  quietHoursEnd: z.number().int().min(0).max(23),
+  businessWhatsapp: z.string().regex(/^254[17]\d{8}$/, "Use 2547XXXXXXXX"),
+  googleReviewUrl: z.union([z.literal(""), z.url()]).optional().transform((v) => v || undefined),
+  instagramHandle: optionalText(40).transform((v) => v?.replace(/^@/, "")),
+});
+
+/** Flatten zod issues into one readable sentence for ConvexError payloads. */
+export function firstIssue(err: z.ZodError): string {
+  const i = err.issues[0];
+  return i ? i.message : "Invalid input";
+}

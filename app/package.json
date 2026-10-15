@@ -1,0 +1,20 @@
+{
+  "name": "drink-booking",
+  "private": true,
+  "packageManager": "pnpm@10.34.7",
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:backend": "pnpm --filter @drink/backend dev",
+    "dev:backend:local": "pnpm --filter @drink/backend dev:local",
+    "dev:web": "pnpm --filter @drink/web dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "preview:web": "pnpm --filter @drink/web build && pnpm --filter @drink/web start"
+  },
+  "devDependencies": {
+    "turbo": "^2.11.8",
+    "typescript": "~5.9.3"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "name": "@drink/backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./api": "./convex/_generated/api.js",
+    "./dataModel": "./convex/_generated/dataModel.d.ts",
+    "./convex/*": "./convex/*.ts"
+  },
+  "scripts": {
+    "dev": "convex dev",
+    "dev:local": "CONVEX_AGENT_MODE=anonymous convex dev --typecheck=disable",
+    "codegen": "convex codegen",
+    "deploy": "convex deploy",
+    "setup:auth": "node scripts/generate-auth-keys.mjs",
+    "typecheck": "tsc -p convex",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@auth/core": "^0.41.3",
+    "@convex-dev/auth": "^0.0.96",
+    "@drink/shared": "workspace:*",
+    "convex": "^1.46.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@edge-runtime/vm": "^5.0.0",
+    "@types/node": "^22.20.5",
+    "convex-test": "^0.0.62",
+    "jose": "^6.0.0",
+    "typescript": "~5.9.3",
+    "vite": "7.3.7",
+    "vitest": "^3.2.7"
+  }
+}
