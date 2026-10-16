@@ -237,12 +237,7 @@ export default function BookingPage() {
           <>
             <p>
               {tattoo.description} · {tattoo.placement}
-              {tattoo.widthCm && tattoo.heightCm && (
-                <span className="tabular">
-                  {" "}
-                  · {tattoo.widthCm}×{tattoo.heightCm} cm
-                </span>
-              )}
+              {tattoo.size && <> · {tattoo.size}</>}
               {tattoo.style && <> · {tattoo.style}</>} · {COLOUR_LABEL[tattoo.colour]}
             </p>
             {(["reference", "final", "healed"] as const).map((kind) => {

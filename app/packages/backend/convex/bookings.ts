@@ -30,8 +30,7 @@ const clientArgV = v.object({
 const tattooArgV = v.object({
   description: v.string(),
   placement: v.string(),
-  widthCm: v.optional(v.number()),
-  heightCm: v.optional(v.number()),
+  size: v.optional(v.string()),
   style: v.optional(v.string()),
   colour: colourV,
   referenceImages: v.optional(v.array(v.id("_storage"))),

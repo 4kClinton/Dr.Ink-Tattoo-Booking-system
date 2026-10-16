@@ -30,6 +30,12 @@ export const STYLE_CHIPS = [
   "Fine line", "Blackwork", "Realism", "Script", "Traditional", "Tribal", "Geometric", "Portrait",
 ] as const;
 
+export const SIZES = [
+  "Mini Tattoo", "Small Tattoo", "Medium Tattoo", "Large Tattoo",
+  "Half Sleeve Leg", "Half Sleeve Arm", "Leg Sleeve", "Arm Sleeve", "Full Chest", "Full Back",
+] as const;
+export type Size = (typeof SIZES)[number];
+
 export const COLOURS = ["black_grey", "colour"] as const;
 export type Colour = (typeof COLOURS)[number];
 export const COLOUR_LABEL: Record<Colour, string> = { black_grey: "Black & grey", colour: "Colour" };

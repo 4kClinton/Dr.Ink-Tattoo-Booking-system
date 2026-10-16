@@ -127,12 +127,12 @@ export default function TodayPage() {
       {week && (
         <>
           <Divider className="my-6" />
-          <p className="flex flex-wrap items-baseline gap-x-3 text-label">
+          <div className="flex flex-wrap items-baseline gap-x-3 text-label">
             <SectionLabel className="inline">This week</SectionLabel>
             <span>
               {week.sessions} session{week.sessions === 1 ? "" : "s"} · <span className="money">{formatKes(week.bookedKes)}</span> booked
             </span>
-          </p>
+          </div>
         </>
       )}
       <p className="mt-10 text-caption text-fg-3">

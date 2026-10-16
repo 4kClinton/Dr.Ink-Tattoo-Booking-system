@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { COLOURS, HEALTH_QUESTIONS, LOCATIONS, SOURCES } from "./constants";
+import { COLOURS, HEALTH_QUESTIONS, LOCATIONS, SIZES, SOURCES } from "./constants";
 import { isValidMpesaCode } from "./mpesa";
 import { normalizeKenyanPhone } from "./phone";
 
@@ -48,8 +48,7 @@ export type ClientInput = z.input<typeof clientInputSchema>;
 export const tattooInputSchema = z.object({
   description: z.string().trim().min(2, "Describe the tattoo").max(500),
   placement: z.string().trim().min(2, "Where on the body?").max(80),
-  widthCm: z.number().positive().max(200).optional(),
-  heightCm: z.number().positive().max(200).optional(),
+  size: z.enum(SIZES).optional(),
   style: optionalText(40),
   colour: z.enum(COLOURS),
 });

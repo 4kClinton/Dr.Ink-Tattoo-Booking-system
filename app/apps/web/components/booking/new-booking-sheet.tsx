@@ -4,8 +4,8 @@ import type { Id } from "@drink/backend/dataModel";
 import {
   clientInputSchema, COLOUR_LABEL, computeDepositRequired, dateKeyEAT, DURATION_CHIPS_MIN, firstName,
   formatDateShort, formatDuration, formatEAT, formatKes, formatTime24, fromDateKey, LOCATION_LABEL,
-  minutesOfDayEAT, PLACEMENT_CHIPS, reminderTime, applyQuietHours, SOURCES, STYLE_CHIPS, tattooInputSchema,
-  type Colour, type Location,
+  minutesOfDayEAT, PLACEMENT_CHIPS, reminderTime, applyQuietHours, SIZES, SOURCES, STYLE_CHIPS, tattooInputSchema,
+  type Colour, type Location, type Size,
 } from "@drink/shared";
 import { useMutation, useQuery } from "convex/react";
 import { AlertCircle, AlertTriangle, ArrowLeft, Check, ChevronDown, Flag, MessageSquare, Search, UserPlus } from "lucide-react";
@@ -73,8 +73,7 @@ export function NewBookingSheet({
   // Step 2 — tattoo
   const [description, setDescription] = useState("");
   const [placement, setPlacement] = useState("");
-  const [widthCm, setWidthCm] = useState("");
-  const [heightCm, setHeightCm] = useState("");
+  const [size, setSize] = useState<Size | "">("");
   const [style, setStyle] = useState("");
   const [colour, setColour] = useState<Colour>("black_grey");
   const [refs, setRefs] = useState<Thumb[]>([]);
@@ -127,7 +126,7 @@ export function NewBookingSheet({
   const clientCheck = newClient ? clientInputSchema.safeParse(newClient) : null;
   const tattooCheck = tattooInputSchema.safeParse({
     description, placement, colour, style: style || undefined,
-    widthCm: widthCm ? Number(widthCm) : undefined, heightCm: heightCm ? Number(heightCm) : undefined,
+    size: size || undefined,
   });
   const stepError = (s: number): string | null => {
     if (s === 0) {
@@ -184,8 +183,7 @@ export function NewBookingSheet({
             },
         tattoo: {
           description, placement, colour, style: style || undefined,
-          widthCm: widthCm ? Number(widthCm) : undefined,
-          heightCm: heightCm ? Number(heightCm) : undefined,
+          size: size || undefined,
           referenceImages: refs.map((r) => r.id as Id<"_storage">),
         },
         startAt,
@@ -385,9 +383,14 @@ export function NewBookingSheet({
               onChange={(v) => setPlacement(v)}
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Input label="Width (cm)" inputMode="decimal" value={widthCm} onChange={(e) => setWidthCm(e.target.value.replace(/[^\d.]/g, ""))} optional />
-            <Input label="Height (cm)" inputMode="decimal" value={heightCm} onChange={(e) => setHeightCm(e.target.value.replace(/[^\d.]/g, ""))} optional />
+          <div className="flex flex-col gap-2">
+            <span className="text-label font-medium">Size <span className="font-normal text-fg-3">(optional)</span></span>
+            <ChoiceChips
+              label="Size"
+              options={SIZES.map((s) => ({ value: s, label: s }))}
+              value={size}
+              onChange={(v) => setSize(v === size ? "" : (v as Size))}
+            />
           </div>
           <div className="flex flex-col gap-2">
             <span className="text-label font-medium">Style <span className="font-normal text-fg-3">(optional)</span></span>
