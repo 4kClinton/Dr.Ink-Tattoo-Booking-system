@@ -2,8 +2,8 @@
 import { api } from "@drink/backend/api";
 import type { Id } from "@drink/backend/dataModel";
 import {
-  dateKeyEAT, formatDateShort, formatEAT, fromDateKey, LOCATION_LABEL, renderTemplate, SAMPLE_VARS,
-  settingsInputSchema, smsSegments,
+  dateKeyEAT, DEFAULT_SETTINGS, FONT_OPTIONS, formatDateShort, formatEAT, fromDateKey, LOCATION_LABEL,
+  renderTemplate, SAMPLE_VARS, settingsInputSchema, smsSegments,
 } from "@drink/shared";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAction, useMutation, useQuery } from "convex/react";
@@ -551,20 +551,102 @@ function AvailabilitySection() {
 function AppearanceSection() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const isArtist = useIsArtist();
   useEffect(() => setMounted(true), []);
   return (
     <Section id="appearance" title="Appearance">
-      <Segmented
-        label="Theme"
-        value={(mounted ? theme : "system") as "system" | "light" | "dark"}
-        onChange={setTheme}
-        options={[
-          { value: "system", label: <span className="inline-flex items-center gap-1.5"><Monitor className="size-4" /> System</span> },
-          { value: "light", label: <span className="inline-flex items-center gap-1.5"><Sun className="size-4" /> Light</span> },
-          { value: "dark", label: <span className="inline-flex items-center gap-1.5"><Moon className="size-4" /> Dark</span> },
-        ]}
-      />
+      <div className="flex flex-col gap-6">
+        <Segmented
+          label="Theme"
+          value={(mounted ? theme : "system") as "system" | "light" | "dark"}
+          onChange={setTheme}
+          options={[
+            { value: "system", label: <span className="inline-flex items-center gap-1.5"><Monitor className="size-4" /> System</span> },
+            { value: "light", label: <span className="inline-flex items-center gap-1.5"><Sun className="size-4" /> Light</span> },
+            { value: "dark", label: <span className="inline-flex items-center gap-1.5"><Moon className="size-4" /> Dark</span> },
+          ]}
+        />
+        {isArtist && <FontSettings />}
+      </div>
     </Section>
+  );
+}
+
+const fontStack = (family: string) => FONT_OPTIONS.find((o) => o.family === family)?.stack;
+
+function FontSettings() {
+  const s = useQuery(api.settings.get);
+  const update = useMutation(api.settings.updateAppearance);
+  const [body, setBody] = useState<string | null>(null);
+  const [heading, setHeading] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (s && body === null) {
+      setBody(s.bodyFont ?? DEFAULT_SETTINGS.bodyFont);
+      setHeading(s.headingFont ?? DEFAULT_SETTINGS.headingFont);
+    }
+  }, [s, body]);
+
+  // Load the currently-selected faces so the preview is accurate before saving.
+  useEffect(() => {
+    if (!body || !heading) return;
+    const families = [...new Set([body, heading].map((f) => FONT_OPTIONS.find((o) => o.family === f)).filter(Boolean))]
+      .map((o) => `family=${o!.family.replace(/ /g, "+")}:${o!.weights}`)
+      .join("&");
+    let el = document.getElementById("font-preview") as HTMLLinkElement | null;
+    if (!el) {
+      el = document.createElement("link");
+      el.id = "font-preview";
+      el.rel = "stylesheet";
+      document.head.appendChild(el);
+    }
+    el.href = `https://fonts.googleapis.com/css2?${families}&display=swap`;
+  }, [body, heading]);
+
+  if (!s || body === null || heading === null) return <Skeleton className="h-40" />;
+  const savedBody = s.bodyFont ?? DEFAULT_SETTINGS.bodyFont;
+  const savedHeading = s.headingFont ?? DEFAULT_SETTINGS.headingFont;
+  const changed = body !== savedBody || heading !== savedHeading;
+
+  return (
+    <div className="flex flex-col gap-4 border-t border-line pt-6">
+      <SectionLabel>Fonts</SectionLabel>
+      <p className="-mt-2 text-caption text-fg-3">Applies across the app the moment you save — no redeploy needed.</p>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Select label="Headings" value={heading} onChange={(e) => setHeading(e.target.value)}>
+          {FONT_OPTIONS.map((o) => (
+            <option key={o.family} value={o.family}>{o.family}</option>
+          ))}
+        </Select>
+        <Select label="Body text" value={body} onChange={(e) => setBody(e.target.value)}>
+          {FONT_OPTIONS.map((o) => (
+            <option key={o.family} value={o.family}>{o.family}</option>
+          ))}
+        </Select>
+      </div>
+      <div className="rounded-md border border-line bg-elevated p-4">
+        <p className="mb-1 text-caption text-fg-3">Preview</p>
+        <p className="text-[26px] leading-tight" style={{ fontFamily: fontStack(heading), fontWeight: 300 }}>
+          Dr.Ink Tattoos
+        </p>
+        <p className="mt-1 text-body" style={{ fontFamily: fontStack(body) }}>
+          Bookings, payments and client records — the quick brown fox jumps over the lazy dog.
+        </p>
+      </div>
+      <Button
+        className="self-start"
+        disabled={!changed}
+        loading={busy}
+        onClick={async () => {
+          setBusy(true);
+          await run(() => update({ bodyFont: body, headingFont: heading }), "Fonts saved");
+          setBusy(false);
+        }}
+      >
+        Save fonts
+      </Button>
+    </div>
   );
 }
 

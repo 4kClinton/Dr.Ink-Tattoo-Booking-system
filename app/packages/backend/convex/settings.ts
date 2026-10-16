@@ -1,4 +1,4 @@
-import { firstIssue, permissionsFor, settingsInputSchema, TEMPLATE_KEYS, TEMPLATES, type TemplateKey } from "@drink/shared";
+import { FONT_FAMILIES, firstIssue, permissionsFor, settingsInputSchema, TEMPLATE_KEYS, TEMPLATES, type TemplateKey } from "@drink/shared";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { currentStaff, requirePermission, requireStaff } from "./lib/auth";
@@ -38,6 +38,20 @@ export const update = mutation({
     if (!s) fail("NOT_FOUND", "Settings missing — sign out and in again.");
     await ctx.db.patch(s._id, parsed.data);
     await audit(ctx, staff._id, "settings", s._id, "updated", parsed.data);
+  },
+});
+
+/** Appearance — fonts are applied at runtime by the web app, so changing them never needs a redeploy. */
+export const updateAppearance = mutation({
+  args: { bodyFont: v.string(), headingFont: v.string() },
+  handler: async (ctx, { bodyFont, headingFont }) => {
+    const staff = await requireStaff(ctx, ["artist"]);
+    const known = FONT_FAMILIES as readonly string[];
+    if (!known.includes(bodyFont) || !known.includes(headingFont)) fail("INVALID", "Unknown font.");
+    const s = await ctx.db.query("settings").first();
+    if (!s) fail("NOT_FOUND", "Settings missing — sign out and in again.");
+    await ctx.db.patch(s._id, { bodyFont, headingFont });
+    await audit(ctx, staff._id, "settings", s._id, "appearance", { bodyFont, headingFont });
   },
 });
 

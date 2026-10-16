@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { COLOURS, HEALTH_QUESTIONS, LOCATIONS, SIZES, SOURCES } from "./constants";
+import { COLOURS, EXPENSE_CATEGORY_VALUES, HEALTH_QUESTIONS, LOCATIONS, SIZES, SOURCES } from "./constants";
 import { isValidMpesaCode } from "./mpesa";
 import { normalizeKenyanPhone } from "./phone";
 
@@ -74,6 +74,17 @@ export const paymentInputSchema = z
     }
   });
 export type PaymentInput = z.input<typeof paymentInputSchema>;
+
+/** R-7 — a studio expense. `incurredAt` is epoch ms (EAT day the cost landed). */
+export const expenseInputSchema = z.object({
+  category: z.enum(EXPENSE_CATEGORY_VALUES),
+  amountKes: positiveKes,
+  incurredAt: z.number().int().positive(),
+  vendor: optionalText(80),
+  note: optionalText(500),
+  method: paymentMethodSchema.optional(),
+});
+export type ExpenseInput = z.input<typeof expenseInputSchema>;
 
 export const scheduleInputSchema = z.object({
   startAt: z.number().int(),

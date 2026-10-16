@@ -175,6 +175,12 @@ export default function BookingPage() {
           Deposit {b.depositPercent}% · {formatKes(b.depositRequiredKes)} required
           {b.quotedPriceKes !== b.finalPriceKes && <> · quoted {formatKes(b.quotedPriceKes)}</>}
         </p>
+        {b.expectedExpensesKes ? (
+          <p className="mt-1 text-caption text-fg-3">
+            Expected expenses: <span className="money">{formatKes(b.expectedExpensesKes)}</span>
+            {b.expectedExpensesNote ? ` · ${b.expectedExpensesNote}` : ""}
+          </p>
+        ) : null}
         {confirmed && balanceKes > 0 && canPay && (
           <Button variant="primary" block className="mt-4" onClick={() => setSheet("pay")}>
             Record payment

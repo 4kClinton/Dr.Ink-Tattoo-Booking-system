@@ -1,4 +1,7 @@
-import { addDaysEAT, dateKeyEAT, LOCATION_LABEL, SOURCES, startOfDayEAT, toEAT } from "@drink/shared";
+import {
+  addDaysEAT, dateKeyEAT, EXPENSE_CATEGORY_LABEL, type ExpenseCategory,
+  LOCATION_LABEL, SOURCES, startOfDayEAT, toEAT,
+} from "@drink/shared";
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { requirePermission } from "./lib/auth";
@@ -15,6 +18,10 @@ export const summary = query({
     const bookings = await ctx.db
       .query("bookings")
       .withIndex("by_start", (q) => q.gte("startAt", from).lt("startAt", to))
+      .collect();
+    const expenses = await ctx.db
+      .query("expenses")
+      .withIndex("by_incurred_at", (q) => q.gte("incurredAt", from).lt("incurredAt", to))
       .collect();
 
     const deposits = payments.filter((p) => p.type === "deposit").reduce((s, p) => s + p.amountKes, 0);
@@ -60,12 +67,42 @@ export const summary = query({
       })
       .filter((r) => r.sessions > 0);
 
+    // Profitability (cash basis): revenue collected this period minus expenses incurred this period.
+    const expensesTotal = expenses.reduce((s, e) => s + e.amountKes, 0);
+    const expensesByCategory = Object.entries(
+      expenses.reduce<Record<string, number>>((acc, e) => {
+        acc[e.category] = (acc[e.category] ?? 0) + e.amountKes;
+        return acc;
+      }, {}),
+    )
+      .map(([key, amountKes]) => ({ key, label: EXPENSE_CATEGORY_LABEL[key as ExpenseCategory] ?? key, amountKes }))
+      .sort((a, b) => b.amountKes - a.amountKes);
+    const netProfit = collected - expensesTotal;
+    const profitMargin = collected > 0 ? netProfit / collected : 0;
+
+    // Per-session economics over completed sessions in the period.
+    const completedValue = completed.reduce((s, b) => s + b.finalPriceKes, 0);
+    const completedMinutes = completed.reduce((s, b) => s + b.durationMin, 0);
+    const avgOrderValue = completed.length ? Math.round(completedValue / completed.length) : 0;
+    const revenuePerHour = completedMinutes ? Math.round(completedValue / (completedMinutes / 60)) : 0;
+
+    // New clients = client records created within the period.
+    const allClients = await ctx.db.query("clients").collect();
+    const newClients = allClients.filter((c) => !c.archived && c._creationTime >= from && c._creationTime < to).length;
+
     return {
       collected,
       deposits,
       balances,
       reversals,
       outstanding,
+      expensesTotal,
+      expensesByCategory,
+      netProfit,
+      profitMargin,
+      avgOrderValue,
+      revenuePerHour,
+      newClients,
       sessionsCompleted: completed.length,
       sessionsBooked: live.length,
       noShowRate: attended ? noShows.length / attended : 0,
@@ -76,6 +113,43 @@ export const summary = query({
       weeks,
       byLocation,
       bySource,
+    };
+  },
+});
+
+/**
+ * Lifetime (all-time) client economics — independent of the period selector.
+ * LTV = average revenue collected per paying client; plus repeat rate and avg sessions per client.
+ */
+export const lifetime = query({
+  args: {},
+  handler: async (ctx) => {
+    await requirePermission(ctx, "reports.view");
+    const payments = await ctx.db.query("payments").withIndex("by_paid_at").collect();
+    const completed = await ctx.db
+      .query("bookings")
+      .withIndex("by_status_start", (q) => q.eq("status", "completed"))
+      .collect();
+
+    const collectedAllTime = payments.reduce((s, p) => s + p.amountKes, 0);
+    const payingClients = new Set(payments.filter((p) => p.amountKes > 0).map((p) => String(p.clientId)));
+
+    const sessionsByClient = new Map<string, number>();
+    for (const b of completed) {
+      const k = String(b.clientId);
+      sessionsByClient.set(k, (sessionsByClient.get(k) ?? 0) + 1);
+    }
+    const clientsWithSession = sessionsByClient.size;
+    const repeatClients = [...sessionsByClient.values()].filter((n) => n >= 2).length;
+
+    return {
+      ltv: payingClients.size ? Math.round(collectedAllTime / payingClients.size) : 0,
+      avgSessionsPerClient: clientsWithSession ? completed.length / clientsWithSession : 0,
+      repeatRate: clientsWithSession ? repeatClients / clientsWithSession : 0,
+      payingClients: payingClients.size,
+      clientsWithSession,
+      repeatClients,
+      collectedAllTime,
     };
   },
 });

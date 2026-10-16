@@ -3,6 +3,7 @@ import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
+import { FontProvider } from "@/components/font-provider";
 
 const url = process.env.NEXT_PUBLIC_CONVEX_URL;
 const convex = new ConvexReactClient(url ?? "http://127.0.0.1:3210");
@@ -11,6 +12,7 @@ export function StaffProviders({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider attribute="data-theme" defaultTheme="system" enableSystem disableTransitionOnChange>
       <ConvexAuthProvider client={convex}>
+        <FontProvider />
         {children}
         <Toaster
           position="bottom-center"

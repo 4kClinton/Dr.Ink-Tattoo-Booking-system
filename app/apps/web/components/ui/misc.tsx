@@ -1,4 +1,5 @@
 import { WifiOff } from "lucide-react";
+import Image from "next/image";
 import { cn } from "@/lib/cn";
 
 export function Skeleton({ className }: { className?: string }) {
@@ -25,22 +26,14 @@ export function Empty({ text, action }: { text: string; action?: React.ReactNode
   );
 }
 
-/** The logo always sits on black; in light mode it's a #000 rounded tile (never recoloured). */
+/** The circular Dr.Ink badge. It always sits on black; in light mode the tile stays #000 (never recoloured). */
 export function LogoTile({ size = 40, className }: { size?: number; className?: string }) {
   return (
     <div
-      className={cn("flex shrink-0 items-center justify-center rounded-md bg-logo", className)}
+      className={cn("flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-logo", className)}
       style={{ width: size, height: size }}
-      aria-label="Dr.Ink"
-      role="img"
     >
-      {/* Stand-in wordmark until the real logo file is added (public/logo.svg). */}
-      <span className="font-display flex flex-col items-center leading-[0.95] text-[#F5F5F5]" style={{ fontSize: size * 0.24 }}>
-        <span>
-          DR<span className="text-[#DF2531]">.</span>
-        </span>
-        <span>INK</span>
-      </span>
+      <Image src="/logo.png" alt="Dr.Ink Tattoos" width={size} height={size} priority className="h-full w-full object-contain" />
     </div>
   );
 }

@@ -3,15 +3,6 @@
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
-/* Mokoto is self-hosted (not on Google Fonts). Drop the licensed file at public/fonts/Mokoto.woff2.
-   Until then the display face falls back to Open Sans heavy caps. */
-@font-face {
-  font-family: "Mokoto";
-  src: url("/fonts/Mokoto.woff2") format("woff2");
-  font-weight: 700;
-  font-display: swap;
-}
-
 @theme inline {
   --color-bg: var(--bg);
   --color-elevated: var(--bg-elevated);
@@ -33,8 +24,8 @@
   --color-warning-subtle: var(--warning-subtle);
   --color-logo: var(--logo-tile);
 
-  --font-sans: var(--font-open-sans), system-ui, sans-serif;
-  --font-display: "Mokoto", var(--font-open-sans), system-ui, sans-serif;
+  --font-sans: var(--font-dm-sans), system-ui, sans-serif;
+  --font-display: var(--font-cormorant), Georgia, "Times New Roman", serif;
 
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -86,9 +77,8 @@
 @layer components {
   .font-display {
     font-family: var(--font-display);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
+    font-weight: 300;
+    letter-spacing: 0.01em;
   }
   .money {
     font-weight: 600;

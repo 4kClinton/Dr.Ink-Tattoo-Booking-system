@@ -2,7 +2,7 @@
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvex } from "convex/react";
 import {
-  BarChart3, CalendarDays, Home, LogOut, MessageSquare, MoreHorizontal, Plus, Settings, Users,
+  BarChart3, CalendarDays, Home, LogOut, MessageSquare, MoreHorizontal, Plus, Settings, Users, Wallet,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -29,6 +29,7 @@ const NAV: NavItem[] = [
   { href: "/clients", label: "Clients", icon: Users },
   { href: "/messages", label: "Messages", icon: MessageSquare },
   { href: "/reports", label: "Reports", icon: BarChart3, permission: "reports.view" },
+  { href: "/expenses", label: "Expenses", icon: Wallet, permission: "expenses.manage" },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -40,6 +41,7 @@ const TITLES: [RegExp, string][] = [
   [/^\/bookings/, "Booking"],
   [/^\/messages/, "Messages"],
   [/^\/reports/, "Reports"],
+  [/^\/expenses/, "Expenses"],
   [/^\/settings/, "Settings"],
 ];
 
@@ -78,7 +80,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const online = useOnline();
   const canBook = useCan("bookings.manage");
   const canReports = useCan("reports.view");
-  const nav = NAV.filter((n) => n.permission !== "reports.view" || canReports);
+  const canExpenses = useCan("expenses.manage");
+  const grants: Partial<Record<Permission, boolean>> = { "reports.view": canReports, "expenses.manage": canExpenses };
+  const nav = NAV.filter((n) => !n.permission || grants[n.permission]);
   const title = TITLES.find(([re]) => re.test(path))?.[1] ?? "";
 
   useEffect(() => setMore(false), [path]);
@@ -170,7 +174,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               onClick={() => setMore(true)}
               className={cn(
                 "flex flex-1 flex-col items-center justify-center gap-1 text-caption font-medium",
-                ["/messages", "/reports", "/settings"].some((p) => path.startsWith(p)) ? "text-fg" : "text-fg-3",
+                ["/messages", "/reports", "/expenses", "/settings"].some((p) => path.startsWith(p)) ? "text-fg" : "text-fg-3",
               )}
             >
               <MoreHorizontal className="size-[22px]" aria-hidden />

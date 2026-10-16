@@ -56,6 +56,13 @@ export const PERMISSIONS = [
     default: false,
   },
   {
+    key: "expenses.manage",
+    label: "Record and view expenses",
+    description: "Add, edit and delete studio expenses. Needed for profit figures in Reports.",
+    group: "Money",
+    default: false,
+  },
+  {
     key: "clients.edit",
     label: "Edit client records",
     description: "Contact details, notes, flags and promo opt-out.",

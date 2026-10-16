@@ -1,13 +1,28 @@
-import { dateKeyEAT, formatTime24 } from "@drink/shared";
+import { dateKeyEAT, EXPENSE_CATEGORY_LABEL, type ExpenseCategory, formatTime24 } from "@drink/shared";
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { requirePermission } from "./lib/auth";
 
 /** R-6 — artist only. Returns rows; the browser turns them into CSV. */
 export const rows = query({
-  args: { kind: v.union(v.literal("clients"), v.literal("bookings"), v.literal("payments")) },
+  args: { kind: v.union(v.literal("clients"), v.literal("bookings"), v.literal("payments"), v.literal("expenses")) },
   handler: async (ctx, { kind }) => {
     await requirePermission(ctx, "exports.csv");
+    if (kind === "expenses") {
+      const staff = await ctx.db.query("staff").collect();
+      const staffName = new Map(staff.map((s) => [s._id, s.name]));
+      const expenses = await ctx.db.query("expenses").withIndex("by_incurred_at").order("desc").collect();
+      return expenses.map((e) => ({
+        id: e._id,
+        date: dateKeyEAT(e.incurredAt),
+        category: EXPENSE_CATEGORY_LABEL[e.category as ExpenseCategory] ?? e.category,
+        amount_kes: e.amountKes,
+        method: e.method ?? "",
+        vendor: e.vendor ?? "",
+        note: e.note ?? "",
+        recorded_by: staffName.get(e.recordedBy) ?? "",
+      }));
+    }
     const clients = await ctx.db.query("clients").collect();
     const clientName = new Map(clients.map((c) => [c._id, c.fullName]));
     if (kind === "clients") {
@@ -38,6 +53,7 @@ export const rows = query({
         source: b.source ?? "",
         quoted_kes: b.quotedPriceKes,
         final_kes: b.finalPriceKes,
+        expected_expenses_kes: b.expectedExpensesKes ?? "",
         deposit_pct: b.depositPercent,
         deposit_required_kes: b.depositRequiredKes,
         paid_kes: b.paidTotalKes,

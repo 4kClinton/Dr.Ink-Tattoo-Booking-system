@@ -51,12 +51,12 @@ export const motion = {
   sheet: 300,
 } as const;
 export const type = {
-  display: { family: "Mokoto", weight: "700", sizeMobile: 28, sizeDesktop: 36, letterSpacing: 0.02 },
-  heading: { family: "Open Sans", weight: "600", size: 20, lineHeight: 28 },
-  subhead: { family: "Open Sans", weight: "600", size: 16, lineHeight: 24 },
-  body: { family: "Open Sans", weight: "400", size: 15, lineHeight: 24 },
-  label: { family: "Open Sans", weight: "500", size: 13, lineHeight: 18 },
-  caption: { family: "Open Sans", weight: "400", size: 12, lineHeight: 16 },
+  display: { family: "Cormorant Garamond", weight: "300", sizeMobile: 28, sizeDesktop: 36, letterSpacing: 0.01 },
+  heading: { family: "DM Sans", weight: "600", size: 20, lineHeight: 28 },
+  subhead: { family: "DM Sans", weight: "600", size: 16, lineHeight: 24 },
+  body: { family: "DM Sans", weight: "400", size: 15, lineHeight: 24 },
+  label: { family: "DM Sans", weight: "500", size: 13, lineHeight: 18 },
+  caption: { family: "DM Sans", weight: "400", size: 12, lineHeight: 16 },
 } as const;
 
 export type ThemeName = keyof typeof palette;

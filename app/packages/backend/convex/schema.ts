@@ -77,6 +77,9 @@ export default defineSchema({
     googleReviewUrl: v.optional(v.string()),
     instagramHandle: v.optional(v.string()),
     currentTermsId: v.optional(v.id("terms")),
+    // + Appearance — Google Fonts chosen in Settings, applied at runtime (no redeploy).
+    bodyFont: v.optional(v.string()),
+    headingFont: v.optional(v.string()),
   }),
 
   terms: defineTable({
@@ -128,6 +131,9 @@ export default defineSchema({
       v.union(v.literal("forfeited"), v.literal("carried"), v.literal("refunded"), v.literal("pending")),
     ),
     source: v.optional(v.string()),
+    // + estimated session logistics cost (transport, food, etc.) — separate from studio `expenses`
+    expectedExpensesKes: v.optional(v.number()),
+    expectedExpensesNote: v.optional(v.string()),
     quotedPriceKes: v.number(),
     finalPriceKes: v.number(),
     depositPercent: v.number(), // SNAPSHOT
@@ -180,6 +186,21 @@ export default defineSchema({
     .index("by_client", ["clientId"]) // +
     .index("by_mpesa_code", ["mpesaCode"])
     .index("by_paid_at", ["paidAt"]),
+
+  // + R-7 studio expenses (cost side of profitability)
+  expenses: defineTable({
+    category: v.string(),
+    amountKes: v.number(),
+    incurredAt: v.number(), // epoch ms, EAT day the cost landed
+    vendor: v.optional(v.string()),
+    note: v.optional(v.string()),
+    method: v.optional(methodV),
+    bookingId: v.optional(v.id("bookings")), // + set when auto-created from a booking's expected expenses
+    recordedBy: v.id("staff"),
+  })
+    .index("by_incurred_at", ["incurredAt"])
+    .index("by_category", ["category"])
+    .index("by_booking", ["bookingId"]),
 
   priceAdjustments: defineTable({
     bookingId: v.id("bookings"),

@@ -15,6 +15,7 @@ import type * as clients from "../clients.js";
 import type * as crons from "../crons.js";
 import type * as dashboard from "../dashboard.js";
 import type * as digest from "../digest.js";
+import type * as expenses from "../expenses.js";
 import type * as exports from "../exports.js";
 import type * as http from "../http.js";
 import type * as lib_audit from "../lib/audit.js";
@@ -52,6 +53,7 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   dashboard: typeof dashboard;
   digest: typeof digest;
+  expenses: typeof expenses;
   exports: typeof exports;
   http: typeof http;
   "lib/audit": typeof lib_audit;

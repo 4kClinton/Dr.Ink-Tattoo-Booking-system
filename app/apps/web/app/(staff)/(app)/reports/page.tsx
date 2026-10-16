@@ -40,13 +40,14 @@ export default function ReportsPage() {
   }));
   const { from, to } = useMemo(() => periodRange(period, custom), [period, custom]);
   const data = useQuery(api.reports.summary, canView && from < to ? { from, to } : "skip");
+  const lifetime = useQuery(api.reports.lifetime, canView ? {} : "skip");
   const convex = useConvex();
   const [exporting, setExporting] = useState<string | null>(null);
 
   // §9: permission-limited — the manager sees nothing here, not disabled ghosts.
   if (!canView) return <Empty text="You don't have access to reports. Ask the artist to turn it on." />;
 
-  async function exportCsv(kind: "clients" | "bookings" | "payments") {
+  async function exportCsv(kind: "clients" | "bookings" | "payments" | "expenses") {
     setExporting(kind);
     try {
       const rows = await convex.query(api.exports.rows, { kind });
@@ -102,6 +103,18 @@ export default function ReportsPage() {
             />
           </div>
 
+          <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <Tile
+              label="Net profit"
+              value={formatKes(data.netProfit)}
+              sub={`${Math.round(data.profitMargin * 100)}% margin · ${formatKes(data.expensesTotal)} costs`}
+              warn={data.netProfit < 0}
+            />
+            <Tile label="Avg order value" value={formatKes(data.avgOrderValue)} sub={`${data.sessionsCompleted} completed`} />
+            <Tile label="Revenue / hour" value={formatKes(data.revenuePerHour)} sub="chair time, completed" />
+            <Tile label="New clients" value={String(data.newClients)} sub="first seen this period" />
+          </div>
+
           <Card className="mt-6">
             <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
               <SectionLabel>Collected per week</SectionLabel>
@@ -135,6 +148,46 @@ export default function ReportsPage() {
             <Breakdown title="By source" rows={data.bySource} empty="No sources recorded." />
           </div>
 
+          <div className="mt-6 grid gap-6 lg:grid-cols-2">
+            <Card>
+              <SectionLabel className="mb-3">Expenses by category</SectionLabel>
+              {data.expensesByCategory.length === 0 ? (
+                <p className="text-label text-fg-2">No expenses in this period.</p>
+              ) : (
+                <ul className="flex flex-col gap-2.5">
+                  {data.expensesByCategory.map((c) => (
+                    <li key={c.key} className="flex justify-between text-label">
+                      <span>{c.label}</span>
+                      <span className="money text-fg">{formatKes(c.amountKes)}</span>
+                    </li>
+                  ))}
+                  <li className="mt-1 flex justify-between border-t border-line pt-2.5 text-label font-semibold">
+                    <span>Total</span>
+                    <span className="money">{formatKes(data.expensesTotal)}</span>
+                  </li>
+                </ul>
+              )}
+            </Card>
+
+            <Card>
+              <SectionLabel className="mb-3">Lifetime value (all-time)</SectionLabel>
+              {!lifetime ? (
+                <Skeleton className="h-28" />
+              ) : (
+                <dl className="grid grid-cols-2 gap-y-3 text-label">
+                  <dt className="text-fg-2">Avg client LTV</dt>
+                  <dd className="money text-right text-fg">{formatKes(lifetime.ltv)}</dd>
+                  <dt className="text-fg-2">Repeat rate</dt>
+                  <dd className="text-right tabular text-fg">{Math.round(lifetime.repeatRate * 100)}%</dd>
+                  <dt className="text-fg-2">Avg sessions / client</dt>
+                  <dd className="text-right tabular text-fg">{lifetime.avgSessionsPerClient.toFixed(1)}</dd>
+                  <dt className="text-fg-2">Paying clients</dt>
+                  <dd className="text-right tabular text-fg">{lifetime.payingClients}</dd>
+                </dl>
+              )}
+            </Card>
+          </div>
+
           <Card className="mt-6">
             <SectionLabel className="mb-2">Deposits</SectionLabel>
             <p className="text-label text-fg-2">
@@ -151,7 +204,7 @@ export default function ReportsPage() {
       )}
 
       <div className="mt-8 flex flex-wrap gap-3">
-        {canExport && (["bookings", "payments", "clients"] as const).map((k) => (
+        {canExport && (["bookings", "payments", "clients", "expenses"] as const).map((k) => (
           <Button key={k} loading={exporting === k} onClick={() => exportCsv(k)}>
             <Download className="size-4" /> Export {k} CSV
           </Button>

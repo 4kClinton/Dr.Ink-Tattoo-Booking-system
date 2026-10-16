@@ -1,11 +1,15 @@
 import type { Metadata, Viewport } from "next";
-import { openSans } from "./fonts";
+import { ServiceWorkerRegister } from "@/components/service-worker-register";
+import { cormorant, dmSans } from "./fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: { default: "Dr.Ink Booking", template: "%s · Dr.Ink" },
   description: "Bookings, payments and client records for Dr.Ink Tattoos.",
   robots: { index: false, follow: false },
+  manifest: "/manifest.webmanifest",
+  applicationName: "Dr.Ink Booking",
+  appleWebApp: { capable: true, title: "Dr.Ink", statusBarStyle: "black-translucent" },
 };
 
 export const viewport: Viewport = {
@@ -20,8 +24,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-KE" suppressHydrationWarning className={openSans.variable}>
-      <body>{children}</body>
+    <html lang="en-KE" suppressHydrationWarning className={`${dmSans.variable} ${cormorant.variable}`}>
+      <body>
+        <ServiceWorkerRegister />
+        {children}
+      </body>
     </html>
   );
 }

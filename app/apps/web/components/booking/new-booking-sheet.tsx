@@ -87,6 +87,8 @@ export function NewBookingSheet({
   const [locationTouched, setLocationTouched] = useState(false);
   const [locationNote, setLocationNote] = useState("");
   const [quoted, setQuoted] = useState<number | null>(null);
+  const [expectedExpenses, setExpectedExpenses] = useState<number | null>(null);
+  const [expectedExpensesNote, setExpectedExpensesNote] = useState("");
   const [moreDetails, setMoreDetails] = useState(false);
   const [source, setSource] = useState("");
   const [projectId, setProjectId] = useState("");
@@ -191,6 +193,8 @@ export function NewBookingSheet({
         location,
         locationNote: location === "other" ? locationNote : undefined,
         quotedPriceKes: quoted,
+        expectedExpensesKes: expectedExpenses || undefined,
+        expectedExpensesNote: expectedExpenses ? expectedExpensesNote.trim() || undefined : undefined,
         source: source || undefined,
         projectId: projectId && projectId !== "new" ? (projectId as Id<"projects">) : undefined,
         newProject:
@@ -503,6 +507,24 @@ export function NewBookingSheet({
             )}
           </div>
 
+          <div className="flex flex-col gap-2">
+            <MoneyInput
+              label="Expected expenses"
+              optional
+              value={expectedExpenses}
+              onValueChange={setExpectedExpenses}
+              hint="Your estimated costs for this session — transport, food, etc. Separate from studio supplies."
+            />
+            {expectedExpenses ? (
+              <Input
+                aria-label="What the expenses are for"
+                placeholder="What for? e.g. transport, lunch"
+                value={expectedExpensesNote}
+                onChange={(e) => setExpectedExpensesNote(e.target.value)}
+              />
+            ) : null}
+          </div>
+
           <button type="button" onClick={() => setMoreDetails((m) => !m)} className="flex items-center gap-1 self-start text-label font-semibold" aria-expanded={moreDetails}>
             More details <ChevronDown className={cn("size-4 transition-transform", moreDetails && "rotate-180")} />
           </button>
@@ -569,6 +591,12 @@ export function NewBookingSheet({
                 <dt className="text-fg-2">Balance</dt>
                 <dd className="money text-warning">{formatKes(Math.max(0, quoted - payment.value.amountKes))}</dd>
               </div>
+              {expectedExpenses ? (
+                <div className="flex justify-between">
+                  <dt className="text-fg-2">Expected expenses{expectedExpensesNote ? ` · ${expectedExpensesNote}` : ""}</dt>
+                  <dd className="money text-fg-2">{formatKes(expectedExpenses)}</dd>
+                </div>
+              ) : null}
             </dl>
           </div>
           <div>

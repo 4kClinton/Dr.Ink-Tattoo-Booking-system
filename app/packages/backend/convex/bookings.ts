@@ -50,6 +50,8 @@ export const create = mutation({
     location: locationV,
     locationNote: v.optional(v.string()),
     quotedPriceKes: v.number(),
+    expectedExpensesKes: v.optional(v.number()),
+    expectedExpensesNote: v.optional(v.string()),
     source: v.optional(v.string()),
     projectId: v.optional(v.id("projects")),
     newProject: v.optional(v.object({ title: v.string(), plannedSessions: v.optional(v.number()) })),
@@ -67,6 +69,9 @@ export const create = mutation({
     if (!schedule.success) fail("INVALID", firstIssue(schedule.error));
     if (!Number.isInteger(args.quotedPriceKes) || args.quotedPriceKes <= 0) {
       fail("INVALID", "Enter the quoted price in whole shillings.");
+    }
+    if (args.expectedExpensesKes !== undefined && (!Number.isInteger(args.expectedExpensesKes) || args.expectedExpensesKes < 0)) {
+      fail("INVALID", "Expected expenses must be whole shillings.");
     }
     const refs = args.tattoo.referenceImages ?? [];
     if (refs.length > 10) fail("LIMIT_REACHED", "Up to 10 reference images per tattoo.");
@@ -160,6 +165,8 @@ export const create = mutation({
       locationNote: schedule.data.locationNote,
       status: "confirmed",
       source: args.source || undefined,
+      expectedExpensesKes: args.expectedExpensesKes || undefined,
+      expectedExpensesNote: args.expectedExpensesKes ? args.expectedExpensesNote?.trim() || undefined : undefined,
       quotedPriceKes: args.quotedPriceKes,
       finalPriceKes: args.quotedPriceKes,
       depositPercent: settings.depositPercent,
@@ -180,6 +187,20 @@ export const create = mutation({
       portfolioApproved: false,
     });
     await insertPayment(ctx, staff, { _id: bookingId, clientId: client._id }, args.deposit, "deposit");
+
+    // + session logistics (transport, food, …) estimated at booking time become a ledger expense,
+    // dated to the session day so it lands in the same reporting period.
+    if (args.expectedExpensesKes && args.expectedExpensesKes > 0) {
+      await ctx.db.insert("expenses", {
+        category: "session",
+        amountKes: args.expectedExpensesKes,
+        incurredAt: args.startAt,
+        note: args.expectedExpensesNote?.trim() || undefined,
+        bookingId,
+        recordedBy: staff._id,
+      });
+    }
+
     const consentToken = await createToken(ctx, "consent", bookingId, args.startAt + DAY_MS);
     await createToken(ctx, "terms", bookingId, Date.now() + 365 * DAY_MS);
 
