@@ -186,7 +186,7 @@ export const create = mutation({
       healedImages: [],
       portfolioApproved: false,
     });
-    await insertPayment(ctx, staff, { _id: bookingId, clientId: client._id }, args.deposit, "deposit");
+    await insertPayment(ctx, staff, { bookingId, clientId: client._id }, args.deposit, "deposit");
 
     // + session logistics (transport, food, …) estimated at booking time become a ledger expense,
     // dated to the session day so it lands in the same reporting period.

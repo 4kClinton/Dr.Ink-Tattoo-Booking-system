@@ -28,7 +28,7 @@ export const record = mutation({
     const b = await ctx.db.get(args.bookingId);
     if (!b) fail("NOT_FOUND", "Booking not found.");
     if (b.status !== "confirmed") fail("BAD_STATUS", "Payments can only be recorded on confirmed bookings.");
-    const paymentId = await insertPayment(ctx, staff, b, args.payment, "balance");
+    const paymentId = await insertPayment(ctx, staff, { bookingId: b._id, clientId: b.clientId }, args.payment, "balance");
     const paidTotalKes = await recomputePaid(ctx, b._id);
     await audit(ctx, staff._id, "payments", paymentId, "recorded", {
       bookingId: b._id,
@@ -64,8 +64,10 @@ export const reverse = mutation({
       note: reason,
     });
     await ctx.db.patch(p._id, { reversedAt: Date.now() });
-    await recomputePaid(ctx, p.bookingId);
-    await revertCompletion(ctx, p.bookingId, staff._id);
+    if (p.bookingId) {
+      await recomputePaid(ctx, p.bookingId);
+      await revertCompletion(ctx, p.bookingId, staff._id);
+    }
     await audit(ctx, staff._id, "payments", p._id, "reversed", { reversalId: id, amountKes: p.amountKes, reason });
     return { message: `Reversed ${formatKes(p.amountKes)}` };
   },

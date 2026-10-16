@@ -23,7 +23,7 @@ export async function findMpesaCode(ctx: QueryCtx, code: string) {
     .withIndex("by_mpesa_code", (q) => q.eq("mpesaCode", normalizeMpesaCode(code)))
     .first();
   if (!existing) return null;
-  const booking = await ctx.db.get(existing.bookingId);
+  const booking = existing.bookingId ? await ctx.db.get(existing.bookingId) : null;
   const client = await ctx.db.get(existing.clientId);
   return {
     paymentId: existing._id,
@@ -42,7 +42,8 @@ export function validatePayment(input: PaymentArg) {
 export async function insertPayment(
   ctx: MutationCtx,
   staff: Doc<"staff">,
-  booking: Pick<Doc<"bookings">, "_id" | "clientId">,
+  // `bookingId` is omitted for a client's historical payment (no booking exists yet)
+  target: { bookingId?: Id<"bookings">; clientId: Id<"clients"> },
   input: PaymentArg,
   type: "deposit" | "balance",
 ): Promise<Id<"payments">> {
@@ -60,8 +61,8 @@ export async function insertPayment(
     }
   }
   return await ctx.db.insert("payments", {
-    bookingId: booking._id,
-    clientId: booking.clientId,
+    bookingId: target.bookingId,
+    clientId: target.clientId,
     type,
     method: p.method,
     amountKes: p.amountKes,

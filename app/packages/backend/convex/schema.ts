@@ -167,7 +167,8 @@ export default defineSchema({
     .index("by_client", ["clientId"]),
 
   payments: defineTable({
-    bookingId: v.id("bookings"),
+    // + optional: a client's historical payment (taken before the system) has no booking
+    bookingId: v.optional(v.id("bookings")),
     clientId: v.id("clients"),
     type: v.union(v.literal("deposit"), v.literal("balance"), v.literal("reversal")),
     method: methodV,

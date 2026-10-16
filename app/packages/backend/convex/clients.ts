@@ -7,6 +7,7 @@ import { can, requirePermission, requireStaff } from "./lib/auth";
 import { audit } from "./lib/audit";
 import { getTattoo } from "./lib/bookingLogic";
 import { fail } from "./lib/errors";
+import { insertPayment, paymentArgV } from "./lib/payments";
 
 async function lastTattoo(ctx: QueryCtx, clientId: Id<"clients">) {
   const t = await ctx.db
@@ -167,6 +168,40 @@ export const projects = query({
         return { ...p, sessionsBooked: sessions.length };
       }),
     );
+  },
+});
+
+/**
+ * Add a client directly (outside the booking flow). Optionally records a payment the
+ * client already made in the past — stored as a real payment with no booking, so it
+ * counts toward their lifetime spend and the revenue reports for the date it was paid.
+ */
+export const create = mutation({
+  args: {
+    fullName: v.string(),
+    phone: v.string(),
+    email: v.optional(v.string()),
+    instagram: v.optional(v.string()),
+    dateOfBirth: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    pastPayment: v.optional(paymentArgV),
+  },
+  handler: async (ctx, { pastPayment, ...input }) => {
+    const staff = await requirePermission(ctx, "clients.edit");
+    if (pastPayment) await requirePermission(ctx, "payments.record");
+    const parsed = clientInputSchema.safeParse(input);
+    if (!parsed.success) fail("INVALID", firstIssue(parsed.error));
+    const clash = await ctx.db.query("clients").withIndex("by_phone", (q) => q.eq("phone", parsed.data.phone)).unique();
+    if (clash) fail("INVALID", `That number already belongs to ${clash.fullName}.`);
+    const clientId = await ctx.db.insert("clients", {
+      ...parsed.data,
+      marketingOptOut: false,
+      archived: false,
+      sessionCount: 0,
+    });
+    if (pastPayment) await insertPayment(ctx, staff, { clientId }, pastPayment, "balance");
+    await audit(ctx, staff._id, "clients", clientId, "created", { hasPastPayment: !!pastPayment });
+    return clientId;
   },
 });
 
