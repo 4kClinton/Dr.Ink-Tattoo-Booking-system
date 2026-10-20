@@ -2,7 +2,7 @@
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvex } from "convex/react";
 import {
-  BarChart3, CalendarDays, Home, LogOut, MessageSquare, MoreHorizontal, Plus, Settings, Users, Wallet,
+  BarChart3, CalendarDays, Home, ListChecks, LogOut, MessageSquare, MoreHorizontal, Plus, Settings, UserPlus, Users, Wallet,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -27,6 +27,8 @@ const NAV: NavItem[] = [
   { href: "/", label: "Today", icon: Home },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/clients", label: "Clients", icon: Users },
+  { href: "/leads", label: "Leads", icon: UserPlus, permission: "clients.edit" },
+  { href: "/tasks", label: "Tasks", icon: ListChecks },
   { href: "/messages", label: "Messages", icon: MessageSquare },
   { href: "/reports", label: "Reports", icon: BarChart3, permission: "reports.view" },
   { href: "/expenses", label: "Expenses", icon: Wallet, permission: "expenses.manage" },
@@ -38,6 +40,8 @@ const TITLES: [RegExp, string][] = [
   [/^\/calendar/, "Calendar"],
   [/^\/clients\/.+/, "Client"],
   [/^\/clients/, "Clients"],
+  [/^\/leads/, "Leads"],
+  [/^\/tasks/, "Tasks"],
   [/^\/bookings/, "Booking"],
   [/^\/messages/, "Messages"],
   [/^\/reports/, "Reports"],
@@ -81,7 +85,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const canBook = useCan("bookings.manage");
   const canReports = useCan("reports.view");
   const canExpenses = useCan("expenses.manage");
-  const grants: Partial<Record<Permission, boolean>> = { "reports.view": canReports, "expenses.manage": canExpenses };
+  const canEditClients = useCan("clients.edit");
+  const grants: Partial<Record<Permission, boolean>> = {
+    "reports.view": canReports,
+    "expenses.manage": canExpenses,
+    "clients.edit": canEditClients,
+  };
   const nav = NAV.filter((n) => !n.permission || grants[n.permission]);
   const title = TITLES.find(([re]) => re.test(path))?.[1] ?? "";
 
@@ -174,7 +183,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               onClick={() => setMore(true)}
               className={cn(
                 "flex flex-1 flex-col items-center justify-center gap-1 text-caption font-medium",
-                ["/messages", "/reports", "/expenses", "/settings"].some((p) => path.startsWith(p)) ? "text-fg" : "text-fg-3",
+                ["/leads", "/tasks", "/messages", "/reports", "/expenses", "/settings"].some((p) => path.startsWith(p)) ? "text-fg" : "text-fg-3",
               )}
             >
               <MoreHorizontal className="size-[22px]" aria-hidden />

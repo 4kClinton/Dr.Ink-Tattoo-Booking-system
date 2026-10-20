@@ -15,7 +15,7 @@ import { useCan, useIsArtist } from "@/components/shell/viewer";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Input, Select, Textarea } from "@/components/ui/field";
 import { MoneyInput, PhoneInput } from "@/components/ui/money-input";
-import { ChoiceChips, Segmented } from "@/components/ui/segmented";
+import { ChoiceChips, MultiChoiceChips, Segmented } from "@/components/ui/segmented";
 import { Sheet } from "@/components/ui/sheet";
 import { cn } from "@/lib/cn";
 import { toAppError } from "@/lib/errors";
@@ -73,7 +73,7 @@ export function NewBookingSheet({
   // Step 2 — tattoo
   const [description, setDescription] = useState("");
   const [placement, setPlacement] = useState("");
-  const [size, setSize] = useState<Size | "">("");
+  const [sizes, setSizes] = useState<Size[]>([]);
   const [style, setStyle] = useState("");
   const [colour, setColour] = useState<Colour>("black_grey");
   const [refs, setRefs] = useState<Thumb[]>([]);
@@ -124,11 +124,21 @@ export function NewBookingSheet({
   const hasOverlap = !!overlaps?.length;
   useEffect(() => setOverride(false), [startAt, durationMin]);
 
+  // Placement is one free-text string of comma-separated spots; the quick-pick chips toggle into it.
+  const placementParts = placement.split(",").map((p) => p.trim()).filter(Boolean);
+  const togglePlacement = (val: string) => {
+    const exists = placementParts.some((p) => p.toLowerCase() === val.toLowerCase());
+    const next = exists ? placementParts.filter((p) => p.toLowerCase() !== val.toLowerCase()) : [...placementParts, val];
+    setPlacement(next.join(", "));
+  };
+  const toggleSize = (v: Size) => setSizes((cur) => (cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v]));
+  const sizeValue = sizes.length ? sizes.join(", ") : undefined;
+
   // ─── per-step validation ───
   const clientCheck = newClient ? clientInputSchema.safeParse(newClient) : null;
   const tattooCheck = tattooInputSchema.safeParse({
     description, placement, colour, style: style || undefined,
-    size: size || undefined,
+    size: sizeValue,
   });
   const stepError = (s: number): string | null => {
     if (s === 0) {
@@ -185,7 +195,7 @@ export function NewBookingSheet({
             },
         tattoo: {
           description, placement, colour, style: style || undefined,
-          size: size || undefined,
+          size: sizeValue,
           referenceImages: refs.map((r) => r.id as Id<"_storage">),
         },
         startAt,
@@ -379,21 +389,21 @@ export function NewBookingSheet({
         <div className="flex flex-col gap-5">
           <Textarea label="Description" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Fine-line rose with stem" autoFocus />
           <div className="flex flex-col gap-2">
-            <Input label="Placement" value={placement} onChange={(e) => setPlacement(e.target.value)} placeholder="Left forearm, inner" />
-            <ChoiceChips
+            <Input label="Placement" value={placement} onChange={(e) => setPlacement(e.target.value)} placeholder="Left forearm, inner" hint="Tap one or more spots, or type your own." />
+            <MultiChoiceChips
               label="Placement quick picks"
               options={PLACEMENT_CHIPS.map((p) => ({ value: p, label: p }))}
-              value={PLACEMENT_CHIPS.find((p) => p.toLowerCase() === placement.toLowerCase()) ?? null}
-              onChange={(v) => setPlacement(v)}
+              values={PLACEMENT_CHIPS.filter((p) => placementParts.some((x) => x.toLowerCase() === p.toLowerCase()))}
+              onToggle={togglePlacement}
             />
           </div>
           <div className="flex flex-col gap-2">
-            <span className="text-label font-medium">Size <span className="font-normal text-fg-3">(optional)</span></span>
-            <ChoiceChips
+            <span className="text-label font-medium">Size <span className="font-normal text-fg-3">(optional · pick any)</span></span>
+            <MultiChoiceChips
               label="Size"
               options={SIZES.map((s) => ({ value: s, label: s }))}
-              value={size}
-              onChange={(v) => setSize(v === size ? "" : (v as Size))}
+              values={sizes}
+              onToggle={toggleSize}
             />
           </div>
           <div className="flex flex-col gap-2">

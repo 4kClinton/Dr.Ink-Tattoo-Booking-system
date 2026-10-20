@@ -18,6 +18,7 @@ import type * as digest from "../digest.js";
 import type * as expenses from "../expenses.js";
 import type * as exports from "../exports.js";
 import type * as http from "../http.js";
+import type * as leads from "../leads.js";
 import type * as lib_audit from "../lib/audit.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_bookingLogic from "../lib/bookingLogic.js";
@@ -37,6 +38,7 @@ import type * as settings from "../settings.js";
 import type * as sms from "../sms.js";
 import type * as smsAdmin from "../smsAdmin.js";
 import type * as staff from "../staff.js";
+import type * as tasks from "../tasks.js";
 import type * as tattoos from "../tattoos.js";
 
 import type {
@@ -56,6 +58,7 @@ declare const fullApi: ApiFromModules<{
   expenses: typeof expenses;
   exports: typeof exports;
   http: typeof http;
+  leads: typeof leads;
   "lib/audit": typeof lib_audit;
   "lib/auth": typeof lib_auth;
   "lib/bookingLogic": typeof lib_bookingLogic;
@@ -75,6 +78,7 @@ declare const fullApi: ApiFromModules<{
   sms: typeof sms;
   smsAdmin: typeof smsAdmin;
   staff: typeof staff;
+  tasks: typeof tasks;
   tattoos: typeof tattoos;
 }>;
 

@@ -168,22 +168,42 @@ export default function ClientPage() {
         />
       </div>
 
-      {tab === "tattoos" &&
-        (data.photos.length ? (
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-            {data.photos.map((p, i) => (
-              <Link key={p.id} href={`/bookings/${p.bookingId}`} className="group relative aspect-square overflow-hidden rounded-md bg-hover">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.url!} alt={`${p.placement} tattoo ${p.kind} ${i + 1}`} className="size-full object-cover" />
-                <span className="absolute bottom-1 left-1 rounded-sm bg-black/70 px-1.5 text-caption text-white capitalize">{p.kind}</span>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <p className="flex items-center gap-2 py-6 text-fg-2">
-            <Camera className="size-4" aria-hidden /> No photos yet.
-          </p>
-        ))}
+      {tab === "tattoos" && (
+        <div className="flex flex-col gap-5">
+          {data.intakeImages.length > 0 && (
+            <div>
+              <SectionLabel className="mb-2">Reference images (from lead)</SectionLabel>
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {data.intakeImages.map((p, i) => (
+                  <a key={p.id} href={p.url} target="_blank" rel="noreferrer" className="relative aspect-square overflow-hidden rounded-md bg-hover">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={p.url} alt={`Reference image ${i + 1}`} className="size-full object-cover" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {data.photos.length > 0 ? (
+            <div>
+              {data.intakeImages.length > 0 && <SectionLabel className="mb-2">Session photos</SectionLabel>}
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {data.photos.map((p, i) => (
+                  <Link key={p.id} href={`/bookings/${p.bookingId}`} className="group relative aspect-square overflow-hidden rounded-md bg-hover">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={p.url!} alt={`${p.placement} tattoo ${p.kind} ${i + 1}`} className="size-full object-cover" />
+                    <span className="absolute bottom-1 left-1 rounded-sm bg-black/70 px-1.5 text-caption text-white capitalize">{p.kind}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : data.intakeImages.length === 0 ? (
+            <p className="flex items-center gap-2 py-6 text-fg-2">
+              <Camera className="size-4" aria-hidden /> No photos yet.
+            </p>
+          ) : null}
+        </div>
+      )}
 
       {tab === "bookings" && (
         <ul className="flex flex-col divide-y divide-line">

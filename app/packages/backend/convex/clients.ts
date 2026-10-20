@@ -136,6 +136,10 @@ export const get = query({
         ),
       )
     ).filter((p) => p.url);
+    // Reference images carried over from the lead at conversion (tattoo ideas, placement photos).
+    const intakeImages = (
+      await Promise.all((client.images ?? []).map(async (id) => ({ id, url: await ctx.storage.getUrl(id) })))
+    ).filter((p): p is { id: Id<"_storage">; url: string } => p.url !== null);
     return {
       client,
       viewerRole: staff.role,
@@ -150,6 +154,7 @@ export const get = query({
       consents: consents.sort((a, b) => b.signedAt - a.signedAt),
       feedback: feedback.sort((a, b) => b.submittedAt - a.submittedAt),
       photos,
+      intakeImages,
       projects,
     };
   },

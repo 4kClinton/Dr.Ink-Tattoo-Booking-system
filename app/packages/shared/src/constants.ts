@@ -31,8 +31,19 @@ export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number]["value"];
 export const EXPENSE_CATEGORY_VALUES = EXPENSE_CATEGORIES.map((c) => c.value) as [ExpenseCategory, ...ExpenseCategory[]];
 export const EXPENSE_CATEGORY_LABEL = Object.fromEntries(EXPENSE_CATEGORIES.map((c) => [c.value, c.label])) as Record<ExpenseCategory, string>;
 
+/** Leads pipeline (pre-client). A lead becomes a client when they book or pay. */
+export const LEAD_STATUSES = ["new", "contacted", "converted", "lost"] as const;
+export type LeadStatus = (typeof LEAD_STATUSES)[number];
+export const LEAD_STATUS_LABEL: Record<LeadStatus, string> = {
+  new: "New",
+  contacted: "Contacted",
+  converted: "Converted",
+  lost: "Lost",
+};
+
 export const SOURCES = [
   { value: "ig_ad", label: "IG ad" },
+  { value :"influencer" , label : "Influencer" },
   { value: "tiktok", label: "TikTok" },
   { value: "ugc", label: "UGC" },
   { value: "referral", label: "Referral" },
@@ -43,7 +54,7 @@ export const SOURCES = [
 export type Source = (typeof SOURCES)[number]["value"];
 
 export const PLACEMENT_CHIPS = [
-  "Forearm", "Upper arm", "Chest", "Back", "Ribs", "Thigh", "Calf", "Hand", "Neck",
+  "Forearm", "Upper arm", "Chest", "Back","Waist", "Ribs", "Thigh", "Calf", "Hand", "Neck",
 ] as const;
 
 export const STYLE_CHIPS = [
@@ -74,6 +85,7 @@ export const HEALTH_QUESTIONS = [
 export type HealthKey = (typeof HEALTH_QUESTIONS)[number]["key"];
 
 export const MAX_IMAGES_PER_TATTOO = 10;
+export const MAX_IMAGES_PER_LEAD = 6;
 export const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/heic", "image/heif", "image/webp"];
 
 /**

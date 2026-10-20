@@ -45,10 +45,64 @@ export const clientInputSchema = z.object({
 });
 export type ClientInput = z.input<typeof clientInputSchema>;
 
+/**
+ * A lead is a prospect captured from anywhere (DMs, walk-up, referral) before they're
+ * a client. Everything is optional except that *something* identifying must be present —
+ * a phone, an Instagram/TikTok handle, or at least a name. Phone is normalised to E.164
+ * when it's a valid Kenyan mobile, otherwise the typed digits are kept as-is so foreign
+ * or partial numbers aren't rejected.
+ */
+const handle = optionalText(80).transform((v) => v?.replace(/^@/, "").replace(/^https?:\/\/\S+\//, "").replace(/\/$/, ""));
+export const leadInputSchema = z
+  .object({
+    name: optionalText(80),
+    phone: z
+      .string()
+      .trim()
+      .max(24)
+      .optional()
+      .transform((v) => {
+        if (!v) return undefined;
+        return normalizeKenyanPhone(v) ?? v.replace(/[^\d+]/g, "");
+      }),
+    instagram: handle,
+    tiktok: handle,
+    source: z.enum(SOURCES.map((s) => s.value) as [string, ...string[]]).optional(),
+    note: optionalText(2000),
+    remindAt: z.number().int().positive().optional(),
+  })
+  .refine((d) => !!(d.name || d.phone || d.instagram || d.tiktok), {
+    message: "Add a phone, an @handle or a name",
+    path: ["phone"],
+  });
+export type LeadInput = z.input<typeof leadInputSchema>;
+
+/**
+ * A studio to-do. Needs a title; everything else is optional. `due` is epoch ms (EAT day start),
+ * `clientIds` are the clients the task is about (rendered as @chips), and `checklist` is an
+ * ordered list of sub-steps that can each be ticked off.
+ */
+export const taskInputSchema = z.object({
+  title: z.string().trim().min(2, "What needs doing?").max(200),
+  note: optionalText(2000),
+  due: z.number().int().positive().optional(),
+  clientIds: z.array(z.string()).max(20).optional(),
+  checklist: z
+    .array(z.object({ text: z.string().trim().min(1).max(200), done: z.boolean() }))
+    .max(50)
+    .optional(),
+});
+export type TaskInput = z.input<typeof taskInputSchema>;
+
 export const tattooInputSchema = z.object({
   description: z.string().trim().min(2, "Describe the tattoo").max(500),
-  placement: z.string().trim().min(2, "Where on the body?").max(80),
-  size: z.enum(SIZES).optional(),
+  // placement is free text — one or more spots, comma-separated (e.g. "Left forearm, Right calf")
+  placement: z.string().trim().min(2, "Where on the body?").max(160),
+  // one or more sizes from the list, comma-separated
+  size: optionalText(160).refine(
+    (v) => !v || v.split(",").every((s) => (SIZES as readonly string[]).includes(s.trim())),
+    "Pick sizes from the list",
+  ),
   style: optionalText(40),
   colour: z.enum(COLOURS),
 });

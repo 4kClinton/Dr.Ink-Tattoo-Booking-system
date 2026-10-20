@@ -103,11 +103,56 @@ export default defineSchema({
     erasedAt: v.optional(v.number()), // + KDPA erasure
     lastVisitAt: v.optional(v.number()), // + denormalised for list
     sessionCount: v.optional(v.number()), // + completed sessions
+    // + reference images carried over when a lead is converted (tattoo ideas, placement photos)
+    images: v.optional(v.array(v.id("_storage"))),
   })
     .index("by_phone", ["phone"])
     .index("by_instagram", ["instagram"]) // +
     .index("by_last_visit", ["lastVisitAt"]) // +
     .searchIndex("search_name", { searchField: "fullName", filterFields: ["archived"] }),
+
+  // + leads: prospects captured from anywhere (DMs, walk-up, referral) before they book.
+  // A lead becomes a client via "Convert" (links convertedClientId) or is marked lost.
+  leads: defineTable({
+    name: v.optional(v.string()),
+    phone: v.optional(v.string()), // E.164 when a valid KE mobile, else typed digits
+    instagram: v.optional(v.string()),
+    tiktok: v.optional(v.string()),
+    source: v.optional(v.string()),
+    note: v.optional(v.string()),
+    status: v.union(
+      v.literal("new"),
+      v.literal("contacted"),
+      v.literal("converted"),
+      v.literal("lost"),
+    ),
+    convertedClientId: v.optional(v.id("clients")),
+    lastContactedAt: v.optional(v.number()),
+    // + the day they promised to book / we agreed to follow up (epoch ms, EAT day start)
+    remindAt: v.optional(v.number()),
+    // + reference images they sent (tattoo ideas, placement photos, screenshots)
+    images: v.optional(v.array(v.id("_storage"))),
+    createdBy: v.id("staff"),
+  })
+    .index("by_status", ["status"])
+    .index("by_phone", ["phone"])
+    .index("by_remind_at", ["remindAt"])
+    .searchIndex("search_name", { searchField: "name", filterFields: ["status"] }),
+
+  // + tasks: the studio's to-do list. Free-text to-dos with an optional due date, an optional
+  // checklist, and any number of linked clients (the "@mentions" shown as chips in the UI).
+  tasks: defineTable({
+    title: v.string(),
+    note: v.optional(v.string()),
+    due: v.optional(v.number()), // epoch ms, EAT day start
+    done: v.boolean(),
+    doneAt: v.optional(v.number()),
+    checklist: v.array(v.object({ text: v.string(), done: v.boolean() })),
+    clientIds: v.array(v.id("clients")),
+    createdBy: v.id("staff"),
+  })
+    .index("by_done", ["done"])
+    .index("by_due", ["due"]),
 
   projects: defineTable({
     clientId: v.id("clients"),

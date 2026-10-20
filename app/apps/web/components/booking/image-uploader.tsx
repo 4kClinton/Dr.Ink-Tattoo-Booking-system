@@ -68,7 +68,7 @@ export function ImageUploader({
   async function onFiles(files: FileList | null) {
     if (!files?.length) return;
     const list = [...files].slice(0, Math.max(0, max - thumbs.length));
-    if (list.length < files.length) toast(`Up to ${max} images per tattoo.`);
+    if (list.length < files.length) toast(`Up to ${max} images.`);
     const done: { id: Id<"_storage">; url: string }[] = [];
     await Promise.all(
       list.map(async (file, i) => {

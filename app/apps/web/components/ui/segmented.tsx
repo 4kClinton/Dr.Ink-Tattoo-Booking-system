@@ -41,6 +41,43 @@ export function Segmented<T extends string>({
   );
 }
 
+/** Multi-select chips — like ChoiceChips but several can be on at once. Selected = solid --text. */
+export function MultiChoiceChips<T extends string | number>({
+  options,
+  values,
+  onToggle,
+  label,
+  className,
+}: {
+  options: readonly { value: T; label: React.ReactNode }[];
+  values: readonly T[];
+  onToggle: (v: T) => void;
+  label: string;
+  className?: string;
+}) {
+  return (
+    <div role="group" aria-label={label} className={cn("flex flex-wrap gap-2", className)}>
+      {options.map((o) => {
+        const active = values.includes(o.value);
+        return (
+          <button
+            key={String(o.value)}
+            type="button"
+            aria-pressed={active}
+            onClick={() => onToggle(o.value)}
+            className={cn(
+              "tap h-9 rounded-full border px-3.5 text-label font-medium transition-colors duration-150",
+              active ? "border-fg bg-fg text-bg" : "border-line-strong bg-surface text-fg hover:bg-hover",
+            )}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /** Quick-pick chips (placement, style, duration, filters). Selected = solid --text, not red. */
 export function ChoiceChips<T extends string | number>({
   options,
