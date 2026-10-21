@@ -1,5 +1,5 @@
 import {
-  addDaysEAT, dateKeyEAT, EXPENSE_CATEGORY_LABEL, type ExpenseCategory,
+  addDaysEAT, BOOKING_VENUES, dateKeyEAT, EXPENSE_CATEGORY_LABEL, type ExpenseCategory,
   LOCATION_LABEL, SOURCES, startOfDayEAT, toEAT,
 } from "@drink/shared";
 import { v } from "convex/values";
@@ -66,6 +66,11 @@ export const summary = query({
         return { key, label, sessions: rows.length, valueKes: rows.reduce((s, b) => s + b.finalPriceKes, 0) };
       })
       .filter((r) => r.sessions > 0);
+    // Studio vs house call. Bookings with no venue set are counted as studio.
+    const byVenue = BOOKING_VENUES.map(({ value, label }) => {
+      const rows = live.filter((b) => (b.venue ?? "studio") === value);
+      return { key: value as string, label, sessions: rows.length, valueKes: rows.reduce((s, b) => s + b.finalPriceKes, 0) };
+    }).filter((r) => r.sessions > 0);
 
     // Profitability (cash basis): revenue collected this period minus expenses incurred this period.
     const expensesTotal = expenses.reduce((s, e) => s + e.amountKes, 0);
@@ -128,6 +133,7 @@ export const summary = query({
       weeks,
       byLocation,
       bySource,
+      byVenue,
     };
   },
 });

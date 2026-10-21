@@ -155,6 +155,10 @@ export default function ReportsPage() {
           </div>
 
           <div className="mt-6 grid gap-6 lg:grid-cols-2">
+            <Breakdown title="Studio vs house call" rows={data.byVenue} empty="No sessions in this period." />
+          </div>
+
+          <div className="mt-6 grid gap-6 lg:grid-cols-2">
             <Card>
               <SectionLabel className="mb-3">Expenses by category</SectionLabel>
               {data.expensesByCategory.length === 0 ? (
