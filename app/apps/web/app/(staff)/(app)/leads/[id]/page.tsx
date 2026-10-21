@@ -4,6 +4,7 @@ import type { Id } from "@drink/backend/dataModel";
 import { BOOKING_EXTRA_LABEL, formatDateShort, formatKes, LEAD_STATUS_LABEL, SOURCES, waLink, type LeadStatus } from "@drink/shared";
 import { useQuery } from "convex/react";
 import { ArrowLeft, AtSign, CalendarClock, Music2, Phone, Send, UserCheck } from "lucide-react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { LeadSheet, type LeadRow } from "@/components/leads/lead-sheet";
@@ -107,6 +108,14 @@ export default function LeadProfilePage() {
             </ContactPill>
           )}
         </div>
+        {lead.client && (
+          <p className="mt-3 text-label text-fg-2">
+            Returning client ·{" "}
+            <Link href={`/clients/${lead.client._id}`} className="font-medium text-fg underline-offset-4 hover:underline">
+              {lead.client.fullName}
+            </Link>
+          </p>
+        )}
       </header>
 
       {lead.convertedClientId ? (

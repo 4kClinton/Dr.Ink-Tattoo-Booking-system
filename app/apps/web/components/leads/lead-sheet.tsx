@@ -1,13 +1,14 @@
 "use client";
 import { api } from "@drink/backend/api";
 import type { Id } from "@drink/backend/dataModel";
-import { BOOKING_EXTRAS, dateKeyEAT, fromDateKey, LEAD_STATUSES, LEAD_STATUS_LABEL, MAX_IMAGES_PER_LEAD, SOURCES, type BookingExtra, type LeadStatus } from "@drink/shared";
+import { BOOKING_EXTRAS, dateKeyEAT, formatPhone, fromDateKey, LEAD_STATUSES, LEAD_STATUS_LABEL, MAX_IMAGES_PER_LEAD, SOURCES, type BookingExtra, type LeadStatus } from "@drink/shared";
 import { useMutation } from "convex/react";
 import { Trash2, UserCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ImageUploader, type Thumb } from "@/components/booking/image-uploader";
+import { ClientLinkField, type LinkedClient } from "@/components/leads/client-link-field";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FieldShell, Input, Select, Textarea } from "@/components/ui/field";
@@ -26,6 +27,8 @@ export interface LeadRow {
   note: string | null;
   status: LeadStatus;
   convertedClientId: string | null;
+  clientId: string | null;
+  client: { _id: string; fullName: string; phone: string } | null;
   remindAt: number | null;
   price: number | null;
   followUpAt: number | null;
@@ -61,6 +64,9 @@ export function LeadSheet({
   const [followUp, setFollowUp] = useState(lead?.followUpAt ? dateKeyEAT(lead.followUpAt) : "");
   const [extras, setExtras] = useState<BookingExtra[]>((lead?.extras ?? []) as BookingExtra[]);
   const toggleExtra = (val: BookingExtra) => setExtras((cur) => (cur.includes(val) ? cur.filter((x) => x !== val) : [...cur, val]));
+  const [linked, setLinked] = useState<LinkedClient | null>(
+    lead?.client ? { _id: lead.client._id, fullName: lead.client.fullName, phone: lead.client.phone, phoneDisplay: formatPhone(lead.client.phone) } : null,
+  );
   const [images, setImages] = useState<Thumb[]>(lead?.images ?? []);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -82,6 +88,7 @@ export function LeadSheet({
         remindAt: remindAt ? fromDateKey(remindAt) : undefined,
         price: price ?? undefined,
         extras: extras.length ? extras : undefined,
+        clientId: linked ? (linked._id as Id<"clients">) : null,
         followUpAt: followUp ? fromDateKey(followUp) : undefined,
         images: images.map((t) => t.id as Id<"_storage">),
       });
@@ -166,6 +173,7 @@ export function LeadSheet({
             onChange={changeStatus}
             options={LEAD_STATUSES.map((s) => ({ value: s, label: LEAD_STATUS_LABEL[s] }))}
           />
+          <ClientLinkField value={linked} onChange={setLinked} />
           <Input label="Name" optional value={name} onChange={(e) => setName(e.target.value)} />
           <PhoneInput label="Phone" optional value={phone} onChange={(e) => setPhone(e.target.value)} />
           <Input label="Instagram" optional prefix="@" value={instagram} onChange={(e) => setInstagram(e.target.value)} />

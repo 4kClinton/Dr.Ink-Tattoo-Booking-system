@@ -189,6 +189,13 @@ export default function ReportsPage() {
                   <dd className="text-right tabular text-fg">{lifetime.avgSessionsPerClient.toFixed(1)}</dd>
                   <dt className="text-fg-2">Paying clients</dt>
                   <dd className="text-right tabular text-fg">{lifetime.payingClients}</dd>
+                  <dt className="text-fg-2">Returning clients (via leads)</dt>
+                  <dd className="text-right tabular text-fg">{lifetime.returningClients}</dd>
+                  <dt className="text-fg-2">Return frequency</dt>
+                  <dd className="text-right tabular text-fg">
+                    {lifetime.returningFrequency.toFixed(1)}×
+                    {lifetime.returningOpen > 0 && <span className="text-fg-3"> · {lifetime.returningOpen} open</span>}
+                  </dd>
                 </dl>
               )}
             </Card>

@@ -37,7 +37,10 @@ async function row(ctx: QueryCtx, l: Doc<"leads">) {
   const images = (
     await Promise.all((l.images ?? []).map(async (id) => ({ id, url: await ctx.storage.getUrl(id) })))
   ).filter((x): x is { id: Id<"_storage">; url: string } => x.url !== null);
+  const linkedClient = l.clientId ? await ctx.db.get(l.clientId) : null;
   return {
+    clientId: l.clientId ?? null,
+    client: linkedClient ? { _id: linkedClient._id, fullName: linkedClient.fullName, phone: linkedClient.phone } : null,
     _id: l._id,
     createdAt: l._creationTime,
     name: l.name ?? null,
@@ -148,14 +151,16 @@ export const counts = query({
 });
 
 export const create = mutation({
-  args: { ...leadArgs, images: v.optional(v.array(v.id("_storage"))) },
-  handler: async (ctx, { images, ...input }) => {
+  args: { ...leadArgs, images: v.optional(v.array(v.id("_storage"))), clientId: v.optional(v.id("clients")) },
+  handler: async (ctx, { images, clientId, ...input }) => {
     const staff = await requirePermission(ctx, "clients.edit");
     const parsed = leadInputSchema.safeParse(input);
     if (!parsed.success) fail("INVALID", firstIssue(parsed.error));
+    if (clientId && !(await ctx.db.get(clientId))) fail("NOT_FOUND", "That client no longer exists.");
     const leadId = await ctx.db.insert("leads", {
       ...parsed.data,
       images,
+      clientId,
       status: "new",
       createdBy: staff._id,
     });
@@ -178,11 +183,17 @@ export const create = mutation({
 });
 
 export const update = mutation({
-  args: { leadId: v.id("leads"), ...leadArgs, images: v.optional(v.array(v.id("_storage"))) },
-  handler: async (ctx, { leadId, images, ...patch }) => {
+  args: {
+    leadId: v.id("leads"),
+    ...leadArgs,
+    images: v.optional(v.array(v.id("_storage"))),
+    clientId: v.optional(v.union(v.id("clients"), v.null())),
+  },
+  handler: async (ctx, { leadId, images, clientId, ...patch }) => {
     const staff = await requirePermission(ctx, "clients.edit");
     const l = await ctx.db.get(leadId);
     if (!l) fail("NOT_FOUND", "Lead not found.");
+    if (clientId && !(await ctx.db.get(clientId))) fail("NOT_FOUND", "That client no longer exists.");
     const merged = {
       name: l.name,
       phone: l.phone,
@@ -234,6 +245,7 @@ export const update = mutation({
     await ctx.db.patch(leadId, {
       ...parsed.data,
       ...(images !== undefined ? { images } : {}),
+      ...(clientId !== undefined ? { clientId: clientId ?? undefined } : {}),
       followUpTaskId,
     });
     await audit(ctx, staff._id, "leads", leadId, "updated", patch);
@@ -266,6 +278,30 @@ export const convert = mutation({
     if (!l) fail("NOT_FOUND", "Lead not found.");
     if (l.convertedClientId) return l.convertedClientId;
 
+    const leadImages = l.images ?? [];
+    let clientId: Id<"clients">;
+
+    // Already a known client (returning for more work) — convert straight to them, no new record.
+    if (l.clientId) {
+      const existing = await ctx.db.get(l.clientId);
+      if (!existing) fail("NOT_FOUND", "The linked client no longer exists.");
+      clientId = existing._id;
+      if (leadImages.length) {
+        const have = new Set<string>(existing.images ?? []);
+        const merged = [...(existing.images ?? []), ...leadImages.filter((id) => !have.has(id))];
+        await ctx.db.patch(clientId, { images: merged });
+      }
+      await ctx.db.patch(leadId, { status: "converted", convertedClientId: clientId });
+      if (l.followUpTaskId) {
+        const task = await ctx.db.get(l.followUpTaskId);
+        if (task && !task.clientIds.includes(clientId)) {
+          await ctx.db.patch(task._id, { clientIds: [...task.clientIds, clientId] });
+        }
+      }
+      await audit(ctx, staff._id, "leads", leadId, "converted", { clientId, existing: true, linked: true });
+      return clientId;
+    }
+
     const parsed = clientInputSchema.safeParse({
       fullName: l.name ?? "",
       phone: l.phone ?? "",
@@ -279,8 +315,6 @@ export const convert = mutation({
       .query("clients")
       .withIndex("by_phone", (q) => q.eq("phone", parsed.data.phone))
       .unique();
-    const leadImages = l.images ?? [];
-    let clientId: Id<"clients">;
     if (clash) {
       clientId = clash._id;
       // Merge the lead's images into the existing client, skipping any duplicates.

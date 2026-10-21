@@ -126,6 +126,9 @@ export default defineSchema({
       v.literal("converted"),
       v.literal("lost"),
     ),
+    // + an existing client this lead is about — some leads are returning clients after more work.
+    // Set when linked at capture time; `convertedClientId` is still set on explicit conversion.
+    clientId: v.optional(v.id("clients")),
     convertedClientId: v.optional(v.id("clients")),
     lastContactedAt: v.optional(v.number()),
     // + the day they promised to book / we agreed to follow up (epoch ms, EAT day start)

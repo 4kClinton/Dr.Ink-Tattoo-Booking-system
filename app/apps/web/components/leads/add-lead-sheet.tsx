@@ -6,6 +6,7 @@ import { useMutation } from "convex/react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ImageUploader, type Thumb } from "@/components/booking/image-uploader";
+import { ClientLinkField, type LinkedClient } from "@/components/leads/client-link-field";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FieldShell, Input, Select, Textarea } from "@/components/ui/field";
@@ -22,16 +23,24 @@ export function AddLeadSheet({ open, onOpenChange }: { open: boolean; onOpenChan
   const [f, setF] = useState(empty);
   const [price, setPrice] = useState<number | null>(null);
   const [extras, setExtras] = useState<BookingExtra[]>([]);
+  const [linked, setLinked] = useState<LinkedClient | null>(null);
   const [images, setImages] = useState<Thumb[]>([]);
   const [busy, setBusy] = useState(false);
   const toggleExtra = (v: BookingExtra) => setExtras((cur) => (cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v]));
 
-  const canSave = !!(f.name.trim() || f.phone.trim() || f.instagram.trim() || f.tiktok.trim());
+  // Linking a client fills in their known details so the lead card still reads naturally.
+  function linkClient(c: LinkedClient | null) {
+    setLinked(c);
+    if (c) setF((prev) => ({ ...prev, name: c.fullName, phone: c.phone ? c.phone.replace(/^\+254/, "0") : prev.phone, instagram: c.instagram ?? prev.instagram }));
+  }
+
+  const canSave = !!(f.name.trim() || f.phone.trim() || f.instagram.trim() || f.tiktok.trim() || linked);
 
   function reset() {
     setF(empty);
     setPrice(null);
     setExtras([]);
+    setLinked(null);
     setImages([]);
   }
 
@@ -48,6 +57,7 @@ export function AddLeadSheet({ open, onOpenChange }: { open: boolean; onOpenChan
         remindAt: f.remindAt ? fromDateKey(f.remindAt) : undefined,
         price: price ?? undefined,
         extras: extras.length ? extras : undefined,
+        clientId: linked ? (linked._id as Id<"clients">) : undefined,
         followUpAt: f.followUp ? fromDateKey(f.followUp) : undefined,
         images: images.length ? images.map((t) => t.id as Id<"_storage">) : undefined,
       });
@@ -77,6 +87,7 @@ export function AddLeadSheet({ open, onOpenChange }: { open: boolean; onOpenChan
       }
     >
       <div className="flex flex-col gap-4">
+        <ClientLinkField value={linked} onChange={linkClient} />
         <Input label="Name" optional value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
         <PhoneInput label="Phone" optional value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
         <Input label="Instagram" optional prefix="@" value={f.instagram} onChange={(e) => setF({ ...f, instagram: e.target.value })} />

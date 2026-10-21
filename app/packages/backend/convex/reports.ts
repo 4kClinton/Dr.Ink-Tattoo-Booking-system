@@ -157,6 +157,20 @@ export const lifetime = query({
     const clientsWithSession = sessionsByClient.size;
     const repeatClients = [...sessionsByClient.values()].filter((n) => n >= 2).length;
 
+    // Returning clients captured through leads — existing clients linked to a lead (prospects for
+    // more work). Frequency = how many lead touches we log per returning client on average.
+    const leads = await ctx.db.query("leads").collect();
+    const linkedLeads = leads.filter((l) => l.clientId);
+    const touchesByClient = new Map<string, number>();
+    for (const l of linkedLeads) {
+      const k = String(l.clientId);
+      touchesByClient.set(k, (touchesByClient.get(k) ?? 0) + 1);
+    }
+    const returningClients = touchesByClient.size;
+    const returningLeadTouches = linkedLeads.length;
+    const returningOpen = linkedLeads.filter((l) => l.status === "new" || l.status === "contacted").length;
+    const returningFrequency = returningClients ? returningLeadTouches / returningClients : 0;
+
     return {
       ltv: payingClients.size ? Math.round(collectedAllTime / payingClients.size) : 0,
       avgSessionsPerClient: clientsWithSession ? completed.length / clientsWithSession : 0,
@@ -165,6 +179,10 @@ export const lifetime = query({
       clientsWithSession,
       repeatClients,
       collectedAllTime,
+      returningClients,
+      returningLeadTouches,
+      returningOpen,
+      returningFrequency,
     };
   },
 });
