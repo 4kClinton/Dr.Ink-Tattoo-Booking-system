@@ -1,7 +1,7 @@
 "use client";
 import { api } from "@drink/backend/api";
 import type { Id } from "@drink/backend/dataModel";
-import { formatDateShort, formatKes, LEAD_STATUS_LABEL, SOURCES, waLink, type LeadStatus } from "@drink/shared";
+import { BOOKING_EXTRA_LABEL, formatDateShort, formatKes, LEAD_STATUS_LABEL, SOURCES, waLink, type LeadStatus } from "@drink/shared";
 import { useQuery } from "convex/react";
 import { ArrowLeft, AtSign, CalendarClock, Music2, Phone, Send, UserCheck } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
@@ -138,6 +138,19 @@ export default function LeadProfilePage() {
           </Detail>
         )}
       </dl>
+
+      {lead.extras.length > 0 && (
+        <div className="mb-6">
+          <SectionLabel className="mb-2">Extras</SectionLabel>
+          <div className="flex flex-wrap gap-1.5">
+            {lead.extras.map((e) => (
+              <span key={e} className="rounded-full border border-line-strong px-2.5 py-1 text-caption font-medium text-fg-2">
+                {BOOKING_EXTRA_LABEL[e] ?? e}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {lead.note && (
         <div className="mb-6">

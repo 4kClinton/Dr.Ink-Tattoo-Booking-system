@@ -2,10 +2,10 @@
 import { api } from "@drink/backend/api";
 import type { Id } from "@drink/backend/dataModel";
 import {
-  clientInputSchema, COLOUR_LABEL, computeDepositRequired, dateKeyEAT, DURATION_CHIPS_MIN, firstName,
-  formatDateShort, formatDuration, formatEAT, formatKes, formatTime24, fromDateKey, LOCATION_LABEL,
+  BOOKING_EXTRAS, clientInputSchema, COLOUR_LABEL, computeDepositRequired, dateKeyEAT, DURATION_CHIPS_MIN, firstName,
+  formatDateShort, formatDuration, formatEAT, formatKes, formatTime24, fromDateKey, LOCATION_LABEL, MAX_TATTOOS_PER_BOOKING,
   minutesOfDayEAT, PLACEMENT_CHIPS, reminderTime, applyQuietHours, SIZES, SOURCES, STYLE_CHIPS, tattooInputSchema,
-  type Colour, type Location, type Size,
+  type BookingExtra, type Colour, type Location, type Size,
 } from "@drink/shared";
 import { useMutation, useQuery } from "convex/react";
 import { AlertCircle, AlertTriangle, ArrowLeft, Check, ChevronDown, Flag, MessageSquare, Search, UserPlus } from "lucide-react";
@@ -15,6 +15,7 @@ import { useCan, useIsArtist } from "@/components/shell/viewer";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Input, Select, Textarea } from "@/components/ui/field";
 import { MoneyInput, PhoneInput } from "@/components/ui/money-input";
+import { NumberStepper } from "@/components/ui/number-stepper";
 import { ChoiceChips, MultiChoiceChips, Segmented } from "@/components/ui/segmented";
 import { Sheet } from "@/components/ui/sheet";
 import { cn } from "@/lib/cn";
@@ -76,7 +77,10 @@ export function NewBookingSheet({
   const [sizes, setSizes] = useState<Size[]>([]);
   const [style, setStyle] = useState("");
   const [colour, setColour] = useState<Colour>("black_grey");
+  const [tattooCount, setTattooCount] = useState(1);
+  const [extras, setExtras] = useState<BookingExtra[]>([]);
   const [refs, setRefs] = useState<Thumb[]>([]);
+  const toggleExtra = (v: BookingExtra) => setExtras((cur) => (cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v]));
 
   // Step 3 — schedule & price
   const [dateKey, setDateKey] = useState<string | null>(prefill?.startAt ? dateKeyEAT(prefill.startAt) : null);
@@ -198,6 +202,8 @@ export function NewBookingSheet({
           size: sizeValue,
           referenceImages: refs.map((r) => r.id as Id<"_storage">),
         },
+        tattooCount,
+        extras: extras.length ? extras : undefined,
         startAt,
         durationMin,
         location,
@@ -415,6 +421,20 @@ export function NewBookingSheet({
             <Segmented label="Colour" value={colour} onChange={setColour} options={(["black_grey", "colour"] as const).map((c) => ({ value: c, label: COLOUR_LABEL[c] }))} />
           </div>
           <div className="flex flex-col gap-2">
+            <span className="text-label font-medium">Number of tattoos</span>
+            <NumberStepper value={tattooCount} min={1} max={MAX_TATTOOS_PER_BOOKING} onChange={setTattooCount} />
+            <p className="text-caption text-fg-3">You can add more later if they get extra work done in the session.</p>
+          </div>
+          <div className="flex flex-col gap-2">
+            <span className="text-label font-medium">Extras <span className="font-normal text-fg-3">(optional)</span></span>
+            <MultiChoiceChips
+              label="Extras"
+              options={BOOKING_EXTRAS.map((e) => ({ value: e.value, label: e.label }))}
+              values={extras}
+              onToggle={toggleExtra}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
             <span className="text-label font-medium">Reference images <span className="font-normal text-fg-3">(optional)</span></span>
             <ImageUploader
               thumbs={refs}
@@ -583,7 +603,13 @@ export function NewBookingSheet({
             <p className="text-subhead font-semibold">{clientName}</p>
             <p className="text-label text-fg-2">
               {description} · {placement}
+              {tattooCount > 1 ? ` · ${tattooCount} tattoos` : ""}
             </p>
+            {extras.length > 0 && (
+              <p className="mt-1 text-label text-fg-2">
+                Extras: {extras.map((e) => BOOKING_EXTRAS.find((x) => x.value === e)?.label ?? e).join(", ")}
+              </p>
+            )}
             <p className="mt-2 text-label">
               {formatDateShort(startAt)} · {formatTime24(startAt)}–{formatTime24(startAt + durationMin * 60000)} ·{" "}
               {location === "other" ? locationNote : LOCATION_LABEL[location]}

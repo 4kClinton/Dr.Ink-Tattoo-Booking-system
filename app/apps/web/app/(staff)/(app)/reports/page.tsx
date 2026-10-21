@@ -115,6 +115,11 @@ export default function ReportsPage() {
             <Tile label="New clients" value={String(data.newClients)} sub="first seen this period" />
           </div>
 
+          <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <Tile label="Tattoos done" value={String(data.tattoosDone)} sub={`${data.sessionsCompleted} sessions completed`} />
+            <Tile label="Avg price / tattoo" value={formatKes(data.avgPricePerTattoo)} sub="revenue ÷ tattoos done" />
+          </div>
+
           <Card className="mt-6">
             <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
               <SectionLabel>Collected per week</SectionLabel>

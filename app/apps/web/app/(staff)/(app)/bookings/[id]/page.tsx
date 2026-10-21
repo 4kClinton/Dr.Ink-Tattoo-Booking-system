@@ -2,8 +2,8 @@
 import { api } from "@drink/backend/api";
 import type { Doc, Id } from "@drink/backend/dataModel";
 import {
-  COLOUR_LABEL, dateKeyEAT, firstName, fromDateKey, formatDateShort, formatEAT, formatKes, formatPhone, formatTime24, LOCATION_LABEL,
-  SOURCES, TEMPLATES, waLink, type TemplateKey,
+  BOOKING_EXTRA_LABEL, COLOUR_LABEL, dateKeyEAT, firstName, fromDateKey, formatDateShort, formatEAT, formatKes, formatPhone, formatTime24, LOCATION_LABEL,
+  MAX_TATTOOS_PER_BOOKING, SOURCES, TEMPLATES, waLink, type TemplateKey,
 } from "@drink/shared";
 import { useMutation, useQuery } from "convex/react";
 import {
@@ -23,6 +23,7 @@ import { useCan, useIsArtist } from "@/components/shell/viewer";
 import { Button } from "@/components/ui/button";
 import { Card, Divider, SectionLabel } from "@/components/ui/card";
 import { Empty, Skeleton } from "@/components/ui/misc";
+import { NumberStepper } from "@/components/ui/number-stepper";
 import { Sheet } from "@/components/ui/sheet";
 import { StatusChip } from "@/components/ui/status-chip";
 import { cn } from "@/lib/cn";
@@ -61,6 +62,7 @@ export default function BookingPage() {
   const addImages = useMutation(api.tattoos.addImages);
   const removeImage = useMutation(api.tattoos.removeImage);
   const setPortfolio = useMutation(api.tattoos.setPortfolioApproved);
+  const setTattooCount = useMutation(api.bookings.setTattooCount);
   const [sheet, setSheet] = useState<SheetName>(null);
   const [reversing, setReversing] = useState<Doc<"payments"> | null>(null);
   const [showAudit, setShowAudit] = useState(false);
@@ -239,6 +241,34 @@ export default function BookingPage() {
       {/* TATTOO */}
       <section className="mb-6">
         <SectionLabel className="mb-2">Tattoo</SectionLabel>
+
+        <div className="mb-3 flex items-center justify-between gap-3 rounded-md border border-line bg-surface p-3">
+          <div>
+            <p className="text-label font-medium">Tattoos this session</p>
+            <p className="text-caption text-fg-3">Bump it up if they add more work mid-session.</p>
+          </div>
+          {canManage && b.status !== "cancelled" ? (
+            <NumberStepper
+              value={b.tattooCount ?? 1}
+              min={1}
+              max={MAX_TATTOOS_PER_BOOKING}
+              onChange={(n) => act(() => setTattooCount({ bookingId: b._id, count: n }), "Tattoo count updated")}
+            />
+          ) : (
+            <span className="text-heading font-semibold tabular">{b.tattooCount ?? 1}</span>
+          )}
+        </div>
+
+        {b.extras && b.extras.length > 0 && (
+          <div className="mb-3 flex flex-wrap gap-1.5">
+            {b.extras.map((e) => (
+              <span key={e} className="rounded-full border border-line-strong px-2.5 py-1 text-caption font-medium text-fg-2">
+                {BOOKING_EXTRA_LABEL[e] ?? e}
+              </span>
+            ))}
+          </div>
+        )}
+
         {tattoo && (
           <>
             <p>

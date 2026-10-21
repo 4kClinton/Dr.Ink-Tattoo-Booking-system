@@ -32,6 +32,7 @@ import type * as lib_settings from "../lib/settings.js";
 import type * as lib_tokens from "../lib/tokens.js";
 import type * as messages from "../messages.js";
 import type * as payments from "../payments.js";
+import type * as promos from "../promos.js";
 import type * as public_ from "../public.js";
 import type * as reports from "../reports.js";
 import type * as settings from "../settings.js";
@@ -72,6 +73,7 @@ declare const fullApi: ApiFromModules<{
   "lib/tokens": typeof lib_tokens;
   messages: typeof messages;
   payments: typeof payments;
+  promos: typeof promos;
   public: typeof public_;
   reports: typeof reports;
   settings: typeof settings;

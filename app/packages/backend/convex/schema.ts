@@ -132,6 +132,8 @@ export default defineSchema({
     remindAt: v.optional(v.number()),
     // + rough quote / expected spend for this lead (whole KES)
     price: v.optional(v.number()),
+    // + add-ons they're interested in (red ink, numbing cream, …) — see @drink/shared BOOKING_EXTRAS
+    extras: v.optional(v.array(v.string())),
     // + a follow-up date that spawns a studio task; followUpTaskId links the task we created so
     // re-saving updates it instead of duplicating, and clearing/deleting the lead removes it.
     followUpAt: v.optional(v.number()),
@@ -169,6 +171,17 @@ export default defineSchema({
     plannedSessions: v.optional(v.number()),
   }).index("by_client", ["clientId"]),
 
+  // + offers & promos: the studio's marketing deals (e.g. "KES 3000 for 3 mini tattoos"). An
+  // internal catalog for staff reference — title, optional price, details, flyer image, active flag.
+  promos: defineTable({
+    title: v.string(),
+    priceKes: v.optional(v.number()),
+    details: v.optional(v.string()),
+    active: v.boolean(),
+    image: v.optional(v.id("_storage")),
+    createdBy: v.id("staff"),
+  }).index("by_active", ["active"]),
+
   bookings: defineTable({
     artistId: v.id("staff"),
     clientId: v.id("clients"),
@@ -188,6 +201,11 @@ export default defineSchema({
     // + estimated session logistics cost (transport, food, etc.) — separate from studio `expenses`
     expectedExpensesKes: v.optional(v.number()),
     expectedExpensesNote: v.optional(v.string()),
+    // + add-ons used on this booking (red ink, numbing cream, …) — tags, no price impact
+    extras: v.optional(v.array(v.string())),
+    // + how many tattoos this session covers; clients sometimes add more mid-session. Defaults to 1
+    // when unset (older bookings). Drives "tattoos done" and "avg price per tattoo" in reports.
+    tattooCount: v.optional(v.number()),
     quotedPriceKes: v.number(),
     finalPriceKes: v.number(),
     depositPercent: v.number(), // SNAPSHOT

@@ -1,6 +1,6 @@
 import {
-  ageOn, balanceDue, clientInputSchema, computeDepositRequired, DAY_MS, endOf, firstIssue,
-  formatKes, scheduleInputSchema, shortName, tattooInputSchema,
+  ageOn, balanceDue, clientInputSchema, computeDepositRequired, DAY_MS, endOf, extrasSchema, firstIssue,
+  formatKes, scheduleInputSchema, shortName, tattooCountSchema, tattooInputSchema,
 } from "@drink/shared";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -53,6 +53,8 @@ export const create = mutation({
     expectedExpensesKes: v.optional(v.number()),
     expectedExpensesNote: v.optional(v.string()),
     source: v.optional(v.string()),
+    extras: v.optional(v.array(v.string())),
+    tattooCount: v.optional(v.number()),
     projectId: v.optional(v.id("projects")),
     newProject: v.optional(v.object({ title: v.string(), plannedSessions: v.optional(v.number()) })),
     deposit: paymentArgV,
@@ -75,6 +77,10 @@ export const create = mutation({
     }
     const refs = args.tattoo.referenceImages ?? [];
     if (refs.length > 10) fail("LIMIT_REACHED", "Up to 10 reference images per tattoo.");
+    const extrasParsed = extrasSchema.safeParse(args.extras);
+    if (!extrasParsed.success) fail("INVALID", firstIssue(extrasParsed.error));
+    const tattooCountParsed = tattooCountSchema.safeParse(args.tattooCount ?? 1);
+    if (!tattooCountParsed.success) fail("INVALID", firstIssue(tattooCountParsed.error));
     const deposit = validatePayment(args.deposit);
 
     // 3. upsert client by phone
@@ -165,6 +171,8 @@ export const create = mutation({
       locationNote: schedule.data.locationNote,
       status: "confirmed",
       source: args.source || undefined,
+      extras: extrasParsed.data,
+      tattooCount: tattooCountParsed.data,
       expectedExpensesKes: args.expectedExpensesKes || undefined,
       expectedExpensesNote: args.expectedExpensesKes ? args.expectedExpensesNote?.trim() || undefined : undefined,
       quotedPriceKes: args.quotedPriceKes,
@@ -366,10 +374,26 @@ export const complete = mutation({
   },
 });
 
+/** Bump the number of tattoos on a session (clients often add more once they're in the chair). */
+export const setTattooCount = mutation({
+  args: { bookingId: v.id("bookings"), count: v.number() },
+  handler: async (ctx, { bookingId, count }) => {
+    const staff = await requirePermission(ctx, "bookings.manage");
+    const b = await ctx.db.get(bookingId);
+    if (!b) fail("NOT_FOUND", "Booking not found.");
+    const parsed = tattooCountSchema.safeParse(count);
+    if (!parsed.success) fail("INVALID", firstIssue(parsed.error));
+    await ctx.db.patch(b._id, { tattooCount: parsed.data });
+    await audit(ctx, staff._id, "bookings", b._id, "tattoo_count", { from: b.tattooCount ?? 1, to: parsed.data });
+    return parsed.data;
+  },
+});
+
 export const update = mutation({
   args: {
     bookingId: v.id("bookings"),
     source: v.optional(v.string()),
+    extras: v.optional(v.array(v.string())),
     projectId: v.optional(v.union(v.id("projects"), v.null())),
     tattoo: v.optional(tattooArgV),
   },
@@ -378,6 +402,11 @@ export const update = mutation({
     const b = await ctx.db.get(args.bookingId);
     if (!b) fail("NOT_FOUND", "Booking not found.");
     if (args.source !== undefined) await ctx.db.patch(b._id, { source: args.source || undefined });
+    if (args.extras !== undefined) {
+      const parsed = extrasSchema.safeParse(args.extras);
+      if (!parsed.success) fail("INVALID", firstIssue(parsed.error));
+      await ctx.db.patch(b._id, { extras: parsed.data });
+    }
     if (args.projectId !== undefined) await ctx.db.patch(b._id, { projectId: args.projectId ?? undefined });
     if (args.tattoo) {
       const parsed = tattooInputSchema.safeParse(args.tattoo);

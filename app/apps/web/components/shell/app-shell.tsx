@@ -2,7 +2,7 @@
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvex } from "convex/react";
 import {
-  BarChart3, CalendarDays, Home, ListChecks, LogOut, MessageSquare, MoreHorizontal, Plus, Settings, UserPlus, Users, Wallet,
+  BarChart3, CalendarDays, Home, ListChecks, LogOut, MessageSquare, MoreHorizontal, Plus, Settings, Tag, UserPlus, Users, Wallet,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -30,6 +30,7 @@ const NAV: NavItem[] = [
   { href: "/leads", label: "Leads", icon: UserPlus, permission: "clients.edit" },
   { href: "/tasks", label: "Tasks", icon: ListChecks },
   { href: "/messages", label: "Messages", icon: MessageSquare },
+  { href: "/offers", label: "Offers", icon: Tag },
   { href: "/reports", label: "Reports", icon: BarChart3, permission: "reports.view" },
   { href: "/expenses", label: "Expenses", icon: Wallet, permission: "expenses.manage" },
   { href: "/settings", label: "Settings", icon: Settings },
@@ -44,6 +45,7 @@ const TITLES: [RegExp, string][] = [
   [/^\/tasks/, "Tasks"],
   [/^\/bookings/, "Booking"],
   [/^\/messages/, "Messages"],
+  [/^\/offers/, "Offers"],
   [/^\/reports/, "Reports"],
   [/^\/expenses/, "Expenses"],
   [/^\/settings/, "Settings"],
@@ -183,7 +185,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               onClick={() => setMore(true)}
               className={cn(
                 "flex flex-1 flex-col items-center justify-center gap-1 text-caption font-medium",
-                ["/leads", "/tasks", "/messages", "/reports", "/expenses", "/settings"].some((p) => path.startsWith(p)) ? "text-fg" : "text-fg-3",
+                ["/leads", "/tasks", "/messages", "/offers", "/reports", "/expenses", "/settings"].some((p) => path.startsWith(p)) ? "text-fg" : "text-fg-3",
               )}
             >
               <MoreHorizontal className="size-[22px]" aria-hidden />

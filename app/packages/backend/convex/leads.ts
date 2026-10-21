@@ -25,6 +25,7 @@ const leadArgs = {
   remindAt: v.optional(v.number()),
   price: v.optional(v.number()),
   followUpAt: v.optional(v.number()),
+  extras: v.optional(v.array(v.string())),
 };
 
 /** A short human name for a lead, used as the follow-up task title. */
@@ -52,6 +53,7 @@ async function row(ctx: QueryCtx, l: Doc<"leads">) {
     remindAt: l.remindAt ?? null,
     price: l.price ?? null,
     followUpAt: l.followUpAt ?? null,
+    extras: l.extras ?? [],
     images,
   };
 }
@@ -168,6 +170,7 @@ export const update = mutation({
       remindAt: l.remindAt,
       price: l.price,
       followUpAt: l.followUpAt,
+      extras: l.extras,
       ...patch,
     };
     const parsed = leadInputSchema.safeParse(merged);

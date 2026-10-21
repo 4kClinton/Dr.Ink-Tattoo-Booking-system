@@ -85,6 +85,9 @@ export const summary = query({
     const completedMinutes = completed.reduce((s, b) => s + b.durationMin, 0);
     const avgOrderValue = completed.length ? Math.round(completedValue / completed.length) : 0;
     const revenuePerHour = completedMinutes ? Math.round(completedValue / (completedMinutes / 60)) : 0;
+    // Per-tattoo economics. A booking with no count set is one tattoo. Avg = total revenue ÷ tattoos.
+    const tattoosDone = completed.reduce((s, b) => s + (b.tattooCount ?? 1), 0);
+    const avgPricePerTattoo = tattoosDone ? Math.round(completedValue / tattoosDone) : 0;
 
     // New clients = client records created within the period.
     const allClients = await ctx.db.query("clients").collect();
@@ -102,6 +105,8 @@ export const summary = query({
       profitMargin,
       avgOrderValue,
       revenuePerHour,
+      tattoosDone,
+      avgPricePerTattoo,
       newClients,
       sessionsCompleted: completed.length,
       sessionsBooked: live.length,

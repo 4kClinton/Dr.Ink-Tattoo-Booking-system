@@ -1,7 +1,7 @@
 "use client";
 import { api } from "@drink/backend/api";
 import type { Id } from "@drink/backend/dataModel";
-import { fromDateKey, MAX_IMAGES_PER_LEAD, SOURCES } from "@drink/shared";
+import { BOOKING_EXTRAS, fromDateKey, MAX_IMAGES_PER_LEAD, SOURCES, type BookingExtra } from "@drink/shared";
 import { useMutation } from "convex/react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FieldShell, Input, Select, Textarea } from "@/components/ui/field";
 import { MoneyInput, PhoneInput } from "@/components/ui/money-input";
+import { MultiChoiceChips } from "@/components/ui/segmented";
 import { Sheet } from "@/components/ui/sheet";
 import { toAppError } from "@/lib/errors";
 
@@ -20,14 +21,17 @@ export function AddLeadSheet({ open, onOpenChange }: { open: boolean; onOpenChan
   const create = useMutation(api.leads.create);
   const [f, setF] = useState(empty);
   const [price, setPrice] = useState<number | null>(null);
+  const [extras, setExtras] = useState<BookingExtra[]>([]);
   const [images, setImages] = useState<Thumb[]>([]);
   const [busy, setBusy] = useState(false);
+  const toggleExtra = (v: BookingExtra) => setExtras((cur) => (cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v]));
 
   const canSave = !!(f.name.trim() || f.phone.trim() || f.instagram.trim() || f.tiktok.trim());
 
   function reset() {
     setF(empty);
     setPrice(null);
+    setExtras([]);
     setImages([]);
   }
 
@@ -43,6 +47,7 @@ export function AddLeadSheet({ open, onOpenChange }: { open: boolean; onOpenChan
         note: f.note.trim() || undefined,
         remindAt: f.remindAt ? fromDateKey(f.remindAt) : undefined,
         price: price ?? undefined,
+        extras: extras.length ? extras : undefined,
         followUpAt: f.followUp ? fromDateKey(f.followUp) : undefined,
         images: images.length ? images.map((t) => t.id as Id<"_storage">) : undefined,
       });
@@ -85,6 +90,9 @@ export function AddLeadSheet({ open, onOpenChange }: { open: boolean; onOpenChan
           ))}
         </Select>
         <MoneyInput label="Price" optional hint="Rough quote or expected spend." value={price} onValueChange={setPrice} />
+        <FieldShell label="Extras" optional hint="Add-ons they're interested in (numbing cream, red ink, …).">
+          <MultiChoiceChips label="Extras" options={BOOKING_EXTRAS.map((e) => ({ value: e.value, label: e.label }))} values={extras} onToggle={toggleExtra} />
+        </FieldShell>
         <DatePicker
           label="Promised to book"
           optional

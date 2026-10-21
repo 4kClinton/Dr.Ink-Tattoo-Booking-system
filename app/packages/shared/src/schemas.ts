@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { COLOURS, EXPENSE_CATEGORY_VALUES, HEALTH_QUESTIONS, LOCATIONS, SIZES, SOURCES } from "./constants";
+import { BOOKING_EXTRA_VALUES, COLOURS, EXPENSE_CATEGORY_VALUES, HEALTH_QUESTIONS, LOCATIONS, MAX_TATTOOS_PER_BOOKING, SIZES, SOURCES } from "./constants";
 import { isValidMpesaCode } from "./mpesa";
 import { normalizeKenyanPhone } from "./phone";
 
@@ -10,6 +10,16 @@ import { normalizeKenyanPhone } from "./phone";
 
 const kes = z.number().int("Whole shillings only").nonnegative();
 const positiveKes = z.number().int("Whole shillings only").positive("Enter an amount");
+
+/** Add-ons (red ink, numbing cream, …) selected on a lead or booking. Unknown values are dropped. */
+export const extrasSchema = z
+  .array(z.enum(BOOKING_EXTRA_VALUES))
+  .max(20)
+  .optional()
+  .transform((v) => (v && v.length ? [...new Set(v)] : undefined));
+
+/** Whole number of tattoos on a booking (≥1), capped so a typo can't run away. */
+export const tattooCountSchema = z.number().int().min(1, "At least one tattoo").max(MAX_TATTOOS_PER_BOOKING);
 
 export const phoneSchema = z
   .string()
@@ -71,6 +81,7 @@ export const leadInputSchema = z
     note: optionalText(2000),
     remindAt: z.number().int().positive().optional(),
     price: z.number().int("Whole shillings only").nonnegative().optional(),
+    extras: extrasSchema,
     // Set to spawn a follow-up task due this day; the mutation keeps the task in sync.
     followUpAt: z.number().int().positive().optional(),
   })
@@ -158,10 +169,21 @@ export const bookingCreateSchema = z.object({
   schedule: scheduleInputSchema,
   quotedPriceKes: positiveKes,
   source: z.enum(SOURCES.map((s) => s.value) as [string, ...string[]]).optional(),
+  extras: extrasSchema,
+  tattooCount: tattooCountSchema.optional(),
   projectId: z.string().optional(),
   deposit: paymentInputSchema,
   overrideOverlap: z.boolean().optional(),
 });
+
+/** An offer / promo in the studio's marketing catalog (e.g. "KES 3000 for 3 mini tattoos"). */
+export const promoInputSchema = z.object({
+  title: z.string().trim().min(2, "Give the offer a title").max(120),
+  priceKes: kes.optional(),
+  details: optionalText(2000),
+  active: z.boolean().optional(),
+});
+export type PromoInput = z.input<typeof promoInputSchema>;
 
 export const healthAnswersSchema = z.object(
   Object.fromEntries(HEALTH_QUESTIONS.map((q) => [q.key, z.boolean()])) as Record<

@@ -41,6 +41,29 @@ export const LEAD_STATUS_LABEL: Record<LeadStatus, string> = {
   lost: "Lost",
 };
 
+/**
+ * Add-ons / options a lead or booking can carry (red ink, numbing cream, etc.). Tags only —
+ * they're tracked for records and reporting but don't change the price. Add a row to offer a
+ * new option; nothing else needs to change.
+ */
+export const BOOKING_EXTRAS = [
+  { value: "numbing_cream", label: "Numbing cream" },
+  { value: "red_ink", label: "Red ink" },
+  { value: "white_ink", label: "White ink" },
+  { value: "uv_ink", label: "UV ink" },
+  { value: "colour", label: "Colour work" },
+  { value: "cover_up", label: "Cover-up" },
+  { value: "touch_up", label: "Touch-up" },
+  { value: "custom_design", label: "Custom design" },
+  { value: "rush", label: "Rush / same-day" },
+] as const;
+export type BookingExtra = (typeof BOOKING_EXTRAS)[number]["value"];
+export const BOOKING_EXTRA_VALUES = BOOKING_EXTRAS.map((e) => e.value) as [BookingExtra, ...BookingExtra[]];
+export const BOOKING_EXTRA_LABEL = Object.fromEntries(BOOKING_EXTRAS.map((e) => [e.value, e.label])) as Record<string, string>;
+
+/** Hard cap on tattoos recorded against one booking (clients sometimes add more mid-session). */
+export const MAX_TATTOOS_PER_BOOKING = 50;
+
 export const SOURCES = [
   { value: "ig_ad", label: "IG ad" },
   { value :"influencer" , label : "Influencer" },
