@@ -72,13 +72,13 @@ export function NewBookingSheet({
   }, [prefillClient, picked]);
 
   // Step 2 — tattoo
-  const [description, setDescription] = useState("");
+  const [description, setDescription] = useState(prefill?.description ?? "");
   const [placement, setPlacement] = useState("");
   const [sizes, setSizes] = useState<Size[]>([]);
   const [style, setStyle] = useState("");
   const [colour, setColour] = useState<Colour>("black_grey");
   const [tattooCount, setTattooCount] = useState(1);
-  const [extras, setExtras] = useState<BookingExtra[]>([]);
+  const [extras, setExtras] = useState<BookingExtra[]>((prefill?.extras ?? []) as BookingExtra[]);
   const [refs, setRefs] = useState<Thumb[]>([]);
   const toggleExtra = (v: BookingExtra) => setExtras((cur) => (cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v]));
 
@@ -91,7 +91,7 @@ export function NewBookingSheet({
   const [locationTouched, setLocationTouched] = useState(false);
   const [locationNote, setLocationNote] = useState("");
   const [venue, setVenue] = useState<BookingVenue>("studio");
-  const [quoted, setQuoted] = useState<number | null>(null);
+  const [quoted, setQuoted] = useState<number | null>(prefill?.quotedPriceKes ?? null);
   const [expectedExpenses, setExpectedExpenses] = useState<number | null>(null);
   const [expectedExpensesNote, setExpectedExpensesNote] = useState("");
   const [moreDetails, setMoreDetails] = useState(false);

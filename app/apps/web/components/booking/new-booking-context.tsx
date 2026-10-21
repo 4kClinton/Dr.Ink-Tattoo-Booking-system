@@ -5,6 +5,10 @@ import { NewBookingSheet } from "./new-booking-sheet";
 export interface NewBookingPrefill {
   startAt?: number;
   clientId?: string;
+  // Carried over when booking straight from a converted lead.
+  description?: string;
+  quotedPriceKes?: number;
+  extras?: string[];
 }
 
 const Ctx = createContext<{ open: (prefill?: NewBookingPrefill) => void }>({ open: () => {} });

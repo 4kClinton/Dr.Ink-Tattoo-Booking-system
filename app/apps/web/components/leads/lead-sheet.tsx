@@ -7,8 +7,10 @@ import { Trash2, UserCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useNewBooking } from "@/components/booking/new-booking-context";
 import { ImageUploader, type Thumb } from "@/components/booking/image-uploader";
 import { ClientLinkField, type LinkedClient } from "@/components/leads/client-link-field";
+import { useCan } from "@/components/shell/viewer";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FieldShell, Input, Select, Textarea } from "@/components/ui/field";
@@ -51,6 +53,8 @@ export function LeadSheet({
   const convert = useMutation(api.leads.convert);
   const remove = useMutation(api.leads.remove);
   const router = useRouter();
+  const { open: openNewBooking } = useNewBooking();
+  const canBook = useCan("bookings.manage");
 
   const [status, setStatus] = useState<LeadStatus>(lead?.status ?? "new");
   const [name, setName] = useState(lead?.name ?? "");
@@ -123,9 +127,21 @@ export function LeadSheet({
       // typed in the sheet must land before we convert.
       await update(patchArgs());
       const id = await convert({ leadId });
-      toast("Converted to client");
       onOpenChange(false);
-      router.push(`/clients/${id}`);
+      // The point of converting is to book them — open a booking prefilled with the lead's idea,
+      // quote and extras. Fall back to the client profile if this user can't make bookings.
+      if (canBook) {
+        toast("Converted — finish the booking");
+        openNewBooking({
+          clientId: id,
+          description: note.trim() || undefined,
+          quotedPriceKes: price ?? undefined,
+          extras: extras.length ? extras : undefined,
+        });
+      } else {
+        toast("Converted to client");
+        router.push(`/clients/${id}`);
+      }
     } catch (e) {
       toast(toAppError(e).message);
     } finally {
