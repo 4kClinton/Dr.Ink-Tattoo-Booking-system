@@ -118,6 +118,7 @@ export default function ReportsPage() {
           <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Tile label="Tattoos done" value={String(data.tattoosDone)} sub={`${data.sessionsCompleted} sessions completed`} />
             <Tile label="Avg price / tattoo" value={formatKes(data.avgPricePerTattoo)} sub="revenue ÷ tattoos done" />
+            <Tile label="Leads value" value={formatKes(data.leadsValue)} sub={`${data.leadsCount} open lead${data.leadsCount === 1 ? "" : "s"}`} />
           </div>
 
           <Card className="mt-6">

@@ -93,6 +93,14 @@ export const summary = query({
     const allClients = await ctx.db.query("clients").collect();
     const newClients = allClients.filter((c) => !c.archived && c._creationTime >= from && c._creationTime < to).length;
 
+    // Leads value = what the open pipeline (new + contacted leads) is worth — sum of their quoted
+    // prices. A current snapshot, not period-scoped (converted/lost leads are excluded).
+    const openLeads = (await ctx.db.query("leads").collect()).filter(
+      (l) => l.status === "new" || l.status === "contacted",
+    );
+    const leadsValue = openLeads.reduce((s, l) => s + (l.price ?? 0), 0);
+    const leadsCount = openLeads.length;
+
     return {
       collected,
       deposits,
@@ -107,6 +115,8 @@ export const summary = query({
       revenuePerHour,
       tattoosDone,
       avgPricePerTattoo,
+      leadsValue,
+      leadsCount,
       newClients,
       sessionsCompleted: completed.length,
       sessionsBooked: live.length,
