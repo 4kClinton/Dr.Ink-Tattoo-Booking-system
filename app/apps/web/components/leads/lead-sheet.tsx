@@ -73,25 +73,29 @@ export function LeadSheet({
 
   const leadId = lead?._id as Id<"leads"> | undefined;
 
+  function patchArgs() {
+    return {
+      leadId: leadId!,
+      name: name.trim() || undefined,
+      phone: phone.trim() || undefined,
+      instagram: instagram.trim() || undefined,
+      tiktok: tiktok.trim() || undefined,
+      source: source || undefined,
+      note: note.trim() || undefined,
+      remindAt: remindAt ? fromDateKey(remindAt) : undefined,
+      price: price ?? undefined,
+      extras: extras.length ? extras : undefined,
+      clientId: linked ? (linked._id as Id<"clients">) : null,
+      followUpAt: followUp ? fromDateKey(followUp) : undefined,
+      images: images.map((t) => t.id as Id<"_storage">),
+    };
+  }
+
   async function save() {
     if (!leadId) return;
     setBusy(true);
     try {
-      await update({
-        leadId,
-        name: name.trim() || undefined,
-        phone: phone.trim() || undefined,
-        instagram: instagram.trim() || undefined,
-        tiktok: tiktok.trim() || undefined,
-        source: source || undefined,
-        note: note.trim() || undefined,
-        remindAt: remindAt ? fromDateKey(remindAt) : undefined,
-        price: price ?? undefined,
-        extras: extras.length ? extras : undefined,
-        clientId: linked ? (linked._id as Id<"clients">) : null,
-        followUpAt: followUp ? fromDateKey(followUp) : undefined,
-        images: images.map((t) => t.id as Id<"_storage">),
-      });
+      await update(patchArgs());
       toast("Lead saved");
       onOpenChange(false);
     } catch (e) {
@@ -115,6 +119,9 @@ export function LeadSheet({
     if (!leadId) return;
     setBusy(true);
     try {
+      // Persist any unsaved edits first — convert validates the stored lead, so the phone/name
+      // typed in the sheet must land before we convert.
+      await update(patchArgs());
       const id = await convert({ leadId });
       toast("Converted to client");
       onOpenChange(false);
