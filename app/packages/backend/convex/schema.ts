@@ -193,6 +193,8 @@ export default defineSchema({
     durationMin: v.number(),
     location: locationV,
     locationNote: v.optional(v.string()),
+    // + whether the session is at the studio or a house call. Optional; unset means studio.
+    venue: v.optional(v.union(v.literal("studio"), v.literal("house_call"))),
     status: statusV,
     cancelReason: v.optional(v.string()),
     cancelledBy: v.optional(v.union(v.literal("client"), v.literal("artist"))),

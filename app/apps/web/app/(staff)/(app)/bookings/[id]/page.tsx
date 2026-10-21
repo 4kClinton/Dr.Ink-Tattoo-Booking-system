@@ -2,7 +2,7 @@
 import { api } from "@drink/backend/api";
 import type { Doc, Id } from "@drink/backend/dataModel";
 import {
-  BOOKING_EXTRA_LABEL, COLOUR_LABEL, dateKeyEAT, firstName, fromDateKey, formatDateShort, formatEAT, formatKes, formatPhone, formatTime24, LOCATION_LABEL,
+  BOOKING_EXTRA_LABEL, BOOKING_VENUE_LABEL, COLOUR_LABEL, dateKeyEAT, firstName, fromDateKey, formatDateShort, formatEAT, formatKes, formatPhone, formatTime24, LOCATION_LABEL,
   MAX_TATTOOS_PER_BOOKING, SOURCES, TEMPLATES, waLink, type TemplateKey,
 } from "@drink/shared";
 import { useMutation, useQuery } from "convex/react";
@@ -116,7 +116,7 @@ export default function BookingPage() {
         </div>
         <p className="mt-2 text-fg-2 tabular">
           {formatDateShort(b.startAt)} · {formatTime24(b.startAt)}–{formatTime24(endAt)} ·{" "}
-          {b.location === "other" ? b.locationNote : LOCATION_LABEL[b.location]}
+          {b.location === "other" ? b.locationNote : LOCATION_LABEL[b.location]} · {BOOKING_VENUE_LABEL[b.venue ?? "studio"]}
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-label">
           <button onClick={() => setSheet("phone")} className="flex items-center gap-1.5 font-medium tabular underline-offset-4 hover:underline">

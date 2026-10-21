@@ -2,10 +2,10 @@
 import { api } from "@drink/backend/api";
 import type { Id } from "@drink/backend/dataModel";
 import {
-  BOOKING_EXTRAS, clientInputSchema, COLOUR_LABEL, computeDepositRequired, dateKeyEAT, DURATION_CHIPS_MIN, firstName,
+  BOOKING_EXTRAS, BOOKING_VENUES, BOOKING_VENUE_LABEL, clientInputSchema, COLOUR_LABEL, computeDepositRequired, dateKeyEAT, DURATION_CHIPS_MIN, firstName,
   formatDateShort, formatDuration, formatEAT, formatKes, formatTime24, fromDateKey, LOCATION_LABEL, MAX_TATTOOS_PER_BOOKING,
   minutesOfDayEAT, PLACEMENT_CHIPS, reminderTime, applyQuietHours, SIZES, SOURCES, STYLE_CHIPS, tattooInputSchema,
-  type BookingExtra, type Colour, type Location, type Size,
+  type BookingExtra, type BookingVenue, type Colour, type Location, type Size,
 } from "@drink/shared";
 import { useMutation, useQuery } from "convex/react";
 import { AlertCircle, AlertTriangle, ArrowLeft, Check, ChevronDown, Flag, MessageSquare, Search, UserPlus } from "lucide-react";
@@ -90,6 +90,7 @@ export function NewBookingSheet({
   const [location, setLocation] = useState<Location>("nairobi");
   const [locationTouched, setLocationTouched] = useState(false);
   const [locationNote, setLocationNote] = useState("");
+  const [venue, setVenue] = useState<BookingVenue>("studio");
   const [quoted, setQuoted] = useState<number | null>(null);
   const [expectedExpenses, setExpectedExpenses] = useState<number | null>(null);
   const [expectedExpensesNote, setExpectedExpensesNote] = useState("");
@@ -208,6 +209,7 @@ export function NewBookingSheet({
         durationMin,
         location,
         locationNote: location === "other" ? locationNote : undefined,
+        venue,
         quotedPriceKes: quoted,
         expectedExpensesKes: expectedExpenses || undefined,
         expectedExpensesNote: expectedExpenses ? expectedExpensesNote.trim() || undefined : undefined,
@@ -513,6 +515,16 @@ export function NewBookingSheet({
           ) : null}
 
           <div className="flex flex-col gap-2">
+            <span className="text-label font-medium">Booking type</span>
+            <Segmented
+              label="Booking type"
+              value={venue}
+              onChange={setVenue}
+              options={BOOKING_VENUES.map((v) => ({ value: v.value, label: v.label }))}
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
             <span className="text-label font-medium">Location</span>
             <Segmented
               label="Location"
@@ -612,7 +624,7 @@ export function NewBookingSheet({
             )}
             <p className="mt-2 text-label">
               {formatDateShort(startAt)} · {formatTime24(startAt)}–{formatTime24(startAt + durationMin * 60000)} ·{" "}
-              {location === "other" ? locationNote : LOCATION_LABEL[location]}
+              {location === "other" ? locationNote : LOCATION_LABEL[location]} · {BOOKING_VENUE_LABEL[venue]}
             </p>
             <dl className="mt-4 flex flex-col gap-1.5 border-t border-line pt-3 text-label">
               <div className="flex justify-between">

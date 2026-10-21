@@ -64,6 +64,15 @@ export const BOOKING_EXTRA_LABEL = Object.fromEntries(BOOKING_EXTRAS.map((e) => 
 /** Hard cap on tattoos recorded against one booking (clients sometimes add more mid-session). */
 export const MAX_TATTOOS_PER_BOOKING = 50;
 
+/** Where a session happens: at the studio, or a house call (the artist travels to the client). */
+export const BOOKING_VENUES = [
+  { value: "studio", label: "Studio" },
+  { value: "house_call", label: "House call" },
+] as const;
+export type BookingVenue = (typeof BOOKING_VENUES)[number]["value"];
+export const BOOKING_VENUE_VALUES = BOOKING_VENUES.map((v) => v.value) as [BookingVenue, ...BookingVenue[]];
+export const BOOKING_VENUE_LABEL = Object.fromEntries(BOOKING_VENUES.map((v) => [v.value, v.label])) as Record<string, string>;
+
 export const SOURCES = [
   { value: "ig_ad", label: "IG ad" },
   { value :"influencer" , label : "Influencer" },

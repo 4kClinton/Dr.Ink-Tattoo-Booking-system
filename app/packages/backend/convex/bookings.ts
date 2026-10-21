@@ -49,6 +49,7 @@ export const create = mutation({
     durationMin: v.number(),
     location: locationV,
     locationNote: v.optional(v.string()),
+    venue: v.optional(v.union(v.literal("studio"), v.literal("house_call"))),
     quotedPriceKes: v.number(),
     expectedExpensesKes: v.optional(v.number()),
     expectedExpensesNote: v.optional(v.string()),
@@ -169,6 +170,7 @@ export const create = mutation({
       durationMin: args.durationMin,
       location: args.location,
       locationNote: schedule.data.locationNote,
+      venue: args.venue ?? "studio",
       status: "confirmed",
       source: args.source || undefined,
       extras: extrasParsed.data,
@@ -394,6 +396,7 @@ export const update = mutation({
     bookingId: v.id("bookings"),
     source: v.optional(v.string()),
     extras: v.optional(v.array(v.string())),
+    venue: v.optional(v.union(v.literal("studio"), v.literal("house_call"))),
     projectId: v.optional(v.union(v.id("projects"), v.null())),
     tattoo: v.optional(tattooArgV),
   },
@@ -402,6 +405,7 @@ export const update = mutation({
     const b = await ctx.db.get(args.bookingId);
     if (!b) fail("NOT_FOUND", "Booking not found.");
     if (args.source !== undefined) await ctx.db.patch(b._id, { source: args.source || undefined });
+    if (args.venue !== undefined) await ctx.db.patch(b._id, { venue: args.venue });
     if (args.extras !== undefined) {
       const parsed = extrasSchema.safeParse(args.extras);
       if (!parsed.success) fail("INVALID", firstIssue(parsed.error));
