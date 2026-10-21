@@ -3,7 +3,7 @@ import { api } from "@drink/backend/api";
 import type { Id } from "@drink/backend/dataModel";
 import { addDaysEAT, formatDateShort, startOfDayEAT } from "@drink/shared";
 import { useMutation, useQuery } from "convex/react";
-import { AtSign, CalendarClock, Plus } from "lucide-react";
+import { AtSign, CalendarClock, Plus, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -20,6 +20,7 @@ interface Row extends TaskLike {
   doneAt: number | null;
   checklistDone: number;
   checklistTotal: number;
+  leads: { _id: string; name: string | null }[];
 }
 
 function TaskCard({ t, i, onEdit }: { t: Row; i: number; onEdit: () => void }) {
@@ -61,8 +62,8 @@ function TaskCard({ t, i, onEdit }: { t: Row; i: number; onEdit: () => void }) {
           <span className={cn("font-semibold", t.done && "text-fg-3 line-through")}>{t.title}</span>
         </button>
 
-        {/* Meta: due + @clients */}
-        {(t.due != null || t.clients.length > 0) && (
+        {/* Meta: due + @clients + leads */}
+        {(t.due != null || t.clients.length > 0 || t.leads.length > 0) && (
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             {t.due != null && (
               <span
@@ -83,6 +84,16 @@ function TaskCard({ t, i, onEdit }: { t: Row; i: number; onEdit: () => void }) {
               >
                 <AtSign className="size-3 text-fg-3" aria-hidden />
                 <span className="truncate">{c.fullName}</span>
+              </Link>
+            ))}
+            {t.leads.map((l) => (
+              <Link
+                key={l._id}
+                href={`/leads/${l._id}`}
+                className="tap inline-flex max-w-[12rem] items-center gap-1 rounded-full border border-line-strong bg-surface px-2.5 py-1 text-caption font-medium text-fg-2 hover:bg-hover hover:text-fg"
+              >
+                <UserPlus className="size-3 text-fg-3" aria-hidden />
+                <span className="truncate">{l.name ?? "Lead"}</span>
               </Link>
             ))}
           </div>

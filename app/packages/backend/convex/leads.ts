@@ -100,6 +100,16 @@ export const search = query({
   },
 });
 
+/** One lead, in full, for the lead profile page. Null if it doesn't exist. */
+export const get = query({
+  args: { leadId: v.id("leads") },
+  handler: async (ctx, { leadId }) => {
+    await requireStaff(ctx);
+    const l = await ctx.db.get(leadId);
+    return l ? await row(ctx, l) : null;
+  },
+});
+
 /** Counts per status for the filter chips. */
 export const counts = query({
   args: {},
@@ -132,6 +142,7 @@ export const create = mutation({
         done: false,
         checklist: [],
         clientIds: [],
+        leadIds: [leadId],
         createdBy: staff._id,
       });
       await ctx.db.patch(leadId, { followUpTaskId: taskId });
@@ -173,7 +184,11 @@ export const update = mutation({
     if (parsed.data.followUpAt) {
       const existing = followUpTaskId ? await ctx.db.get(followUpTaskId) : null;
       if (existing) {
-        await ctx.db.patch(existing._id, { due: parsed.data.followUpAt });
+        // Re-date, and backfill the lead link for tasks created before leadIds existed.
+        await ctx.db.patch(existing._id, {
+          due: parsed.data.followUpAt,
+          leadIds: existing.leadIds?.includes(leadId) ? existing.leadIds : [...(existing.leadIds ?? []), leadId],
+        });
       } else {
         followUpTaskId = await ctx.db.insert("tasks", {
           title: `Follow up with ${leadLabel(parsed.data)}`,
@@ -181,6 +196,7 @@ export const update = mutation({
           done: false,
           checklist: [],
           clientIds: l.convertedClientId ? [l.convertedClientId] : [],
+          leadIds: [leadId],
           createdBy: staff._id,
         });
       }

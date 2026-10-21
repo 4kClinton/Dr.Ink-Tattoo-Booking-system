@@ -12,6 +12,7 @@ const taskArgs = {
   note: v.optional(v.string()),
   due: v.optional(v.number()),
   clientIds: v.optional(v.array(v.id("clients"))),
+  leadIds: v.optional(v.array(v.id("leads"))),
   checklist: v.optional(checklistV),
 };
 
@@ -32,7 +33,29 @@ async function resolveClients(ctx: QueryCtx, tasks: Doc<"tasks">[]) {
       .map((c) => ({ _id: c._id, fullName: c.fullName }));
 }
 
-function shape(t: Doc<"tasks">, clients: { _id: Id<"clients">; fullName: string }[]) {
+/** Same as resolveClients, for the leads a task links to. A lead's display name falls back to
+ * its phone/handle. Skips leads that were deleted. */
+async function resolveLeads(ctx: QueryCtx, tasks: Doc<"tasks">[]) {
+  const ids = [...new Set(tasks.flatMap((t) => t.leadIds ?? []))];
+  const entries = await Promise.all(
+    ids.map(async (id) => {
+      const l = await ctx.db.get(id);
+      return [id, l] as const;
+    }),
+  );
+  const byId = new Map(entries);
+  return (t: Doc<"tasks">) =>
+    (t.leadIds ?? [])
+      .map((id) => byId.get(id))
+      .filter((l): l is Doc<"leads"> => !!l)
+      .map((l) => ({ _id: l._id, name: l.name ?? l.phone ?? l.instagram ?? l.tiktok ?? null }));
+}
+
+function shape(
+  t: Doc<"tasks">,
+  clients: { _id: Id<"clients">; fullName: string }[],
+  leads: { _id: Id<"leads">; name: string | null }[],
+) {
   const done = t.checklist.filter((i) => i.done).length;
   return {
     _id: t._id,
@@ -46,6 +69,7 @@ function shape(t: Doc<"tasks">, clients: { _id: Id<"clients">; fullName: string 
     checklistDone: done,
     checklistTotal: t.checklist.length,
     clients,
+    leads,
   };
 }
 export type TaskShape = ReturnType<typeof shape>;
@@ -66,7 +90,8 @@ export const list = query({
         : (a.due ?? Infinity) - (b.due ?? Infinity) || b._creationTime - a._creationTime,
     );
     const clientsOf = await resolveClients(ctx, tasks);
-    return tasks.map((t) => shape(t, clientsOf(t)));
+    const leadsOf = await resolveLeads(ctx, tasks);
+    return tasks.map((t) => shape(t, clientsOf(t), leadsOf(t)));
   },
 });
 
@@ -84,7 +109,7 @@ export const openCount = query({
   },
 });
 
-function parse(input: { title: string; note?: string; due?: number; clientIds?: string[]; checklist?: { text: string; done: boolean }[] }) {
+function parse(input: { title: string; note?: string; due?: number; clientIds?: string[]; leadIds?: string[]; checklist?: { text: string; done: boolean }[] }) {
   const parsed = taskInputSchema.safeParse(input);
   if (!parsed.success) fail("INVALID", firstIssue(parsed.error));
   return parsed.data;
@@ -100,6 +125,7 @@ export const create = mutation({
       note: data.note,
       due: data.due,
       clientIds: (data.clientIds ?? []) as Id<"clients">[],
+      leadIds: (data.leadIds ?? []) as Id<"leads">[],
       checklist: data.checklist ?? [],
       done: false,
       createdBy: staff._id,
@@ -115,11 +141,14 @@ export const update = mutation({
     const staff = await requireStaff(ctx);
     const t = await ctx.db.get(taskId);
     if (!t) fail("NOT_FOUND", "Task not found.");
+    // leadIds aren't editable from the task sheet, so keep whatever's already linked when the
+    // caller doesn't send them — this preserves the follow-up lead chip across edits.
     const data = parse({
       title: patch.title ?? t.title,
       note: patch.note ?? t.note,
       due: patch.due ?? t.due,
       clientIds: patch.clientIds ?? t.clientIds,
+      leadIds: patch.leadIds ?? t.leadIds,
       checklist: patch.checklist ?? t.checklist,
     });
     await ctx.db.patch(taskId, {
@@ -127,6 +156,7 @@ export const update = mutation({
       note: data.note,
       due: data.due,
       clientIds: (data.clientIds ?? []) as Id<"clients">[],
+      leadIds: (data.leadIds ?? []) as Id<"leads">[],
       checklist: data.checklist ?? [],
     });
     await audit(ctx, staff._id, "tasks", taskId, "updated");

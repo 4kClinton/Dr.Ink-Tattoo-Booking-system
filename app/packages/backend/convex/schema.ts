@@ -155,6 +155,9 @@ export default defineSchema({
     doneAt: v.optional(v.number()),
     checklist: v.array(v.object({ text: v.string(), done: v.boolean() })),
     clientIds: v.array(v.id("clients")),
+    // + leads this task is about (e.g. an auto-created "follow up" task links back to its lead),
+    // rendered as chips that open the lead profile. Optional so pre-existing tasks still validate.
+    leadIds: v.optional(v.array(v.id("leads"))),
     createdBy: v.id("staff"),
   })
     .index("by_done", ["done"])

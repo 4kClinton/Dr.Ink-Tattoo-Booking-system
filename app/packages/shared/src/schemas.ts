@@ -90,6 +90,7 @@ export const taskInputSchema = z.object({
   note: optionalText(2000),
   due: z.number().int().positive().optional(),
   clientIds: z.array(z.string()).max(20).optional(),
+  leadIds: z.array(z.string()).max(20).optional(),
   checklist: z
     .array(z.object({ text: z.string().trim().min(1).max(200), done: z.boolean() }))
     .max(50)
