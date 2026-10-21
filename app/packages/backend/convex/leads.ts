@@ -102,6 +102,29 @@ export const search = query({
   },
 });
 
+/**
+ * Open leads with a "promised to book" date in [from, to) — for the calendar. Converted and lost
+ * leads drop out (they're no longer waiting to book). Returns a light day-marker shape.
+ */
+export const remindRange = query({
+  args: { from: v.number(), to: v.number() },
+  handler: async (ctx, { from, to }) => {
+    await requireStaff(ctx);
+    const rows = await ctx.db
+      .query("leads")
+      .withIndex("by_remind_at", (q) => q.gte("remindAt", from).lt("remindAt", to))
+      .collect();
+    return rows
+      .filter((l) => l.status === "new" || l.status === "contacted")
+      .map((l) => ({
+        _id: l._id,
+        name: l.name ?? l.phone ?? (l.instagram ? `@${l.instagram}` : l.tiktok ? `@${l.tiktok}` : "Lead"),
+        remindAt: l.remindAt!,
+        status: l.status,
+      }));
+  },
+});
+
 /** One lead, in full, for the lead profile page. Null if it doesn't exist. */
 export const get = query({
   args: { leadId: v.id("leads") },

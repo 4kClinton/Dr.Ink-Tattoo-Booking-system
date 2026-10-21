@@ -5,7 +5,8 @@ import {
   startOfDayEAT, toEAT,
 } from "@drink/shared";
 import { useQuery } from "convex/react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, UserPlus } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNewBooking } from "@/components/booking/new-booking-context";
 import { SessionRow, type BookingSummary } from "@/components/booking/session-row";
@@ -18,6 +19,15 @@ import { cn } from "@/lib/cn";
 import { useIsDesktop, useNow } from "@/lib/hooks";
 
 type View = "agenda" | "day" | "week" | "month";
+type Entities = "both" | "clients" | "leads";
+
+export interface LeadEntry {
+  _id: string;
+  name: string;
+  remindAt: number;
+  status: string;
+}
+
 const HOUR_START = 7;
 const HOUR_END = 22;
 const HOUR_PX = 56;
@@ -54,6 +64,10 @@ export default function CalendarPage() {
   const [view, setView] = useState<View>("agenda");
   const [anchor, setAnchor] = useState(() => startOfDayEAT(Date.now()));
   const [showCancelled, setShowCancelled] = useState(false);
+  const canLeads = useCan("clients.edit");
+  const [entities, setEntities] = useState<Entities>("both");
+  const showClients = entities !== "leads";
+  const showLeads = canLeads && entities !== "clients";
 
   useEffect(() => setView(desktop ? "week" : "agenda"), [desktop]);
 
@@ -68,6 +82,7 @@ export default function CalendarPage() {
   }, [view, anchor]);
 
   const rows = useQuery(api.bookings.range, { from, to, includeCancelled: showCancelled });
+  const leadRows = useQuery(api.leads.remindRange, showLeads ? { from, to } : "skip");
   const avail = useQuery(api.availability.list);
   const ranges: Range[] = useMemo(() => [...(avail?.blocks ?? []), ...(avail?.tours ?? [])] as Range[], [avail]);
 
@@ -99,12 +114,23 @@ export default function CalendarPage() {
 
   const byDay = useMemo(() => {
     const m = new Map<string, BookingSummary[]>();
+    if (!showClients) return m;
     for (const r of rows ?? []) {
       const k = dateKeyEAT(r.startAt);
       m.set(k, [...(m.get(k) ?? []), r]);
     }
     return m;
-  }, [rows]);
+  }, [rows, showClients]);
+
+  const leadsByDay = useMemo(() => {
+    const m = new Map<string, LeadEntry[]>();
+    if (!showLeads) return m;
+    for (const l of leadRows ?? []) {
+      const k = dateKeyEAT(l.remindAt);
+      m.set(k, [...(m.get(k) ?? []), l]);
+    }
+    return m;
+  }, [leadRows, showLeads]);
 
   const rangeFor = useCallback(
     (dayStart: number) => ranges.find((r) => (r.from ?? 0) <= dayStart && dayStart < (r.to ?? 0)),
@@ -138,6 +164,20 @@ export default function CalendarPage() {
           Today
         </Button>
         <div className="ml-auto flex flex-wrap items-center gap-3">
+          {canLeads && (
+            <Segmented
+              label="Show"
+              size="sm"
+              value={entities}
+              onChange={setEntities}
+              className="w-auto"
+              options={[
+                { value: "both", label: "Both" },
+                { value: "clients", label: "Clients" },
+                { value: "leads", label: "Leads" },
+              ]}
+            />
+          )}
           <label className="flex items-center gap-2 text-label text-fg-2">
             <input
               type="checkbox"
@@ -169,17 +209,18 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {!desktop && <DateStrip anchor={anchor} onPick={setAnchor} marked={byDay} />}
+      {!desktop && <DateStrip anchor={anchor} onPick={setAnchor} marked={byDay} leadMarked={leadsByDay} />}
 
       {rows === undefined ? (
         <ListSkeleton rows={5} />
       ) : view === "agenda" ? (
-        <Agenda from={from} days={14} byDay={byDay} rangeFor={rangeFor} onEmpty={canBook ? (d) => openNewBooking({ startAt: d + 10 * 3600_000 }) : undefined} />
+        <Agenda from={from} days={14} byDay={byDay} leadsByDay={leadsByDay} rangeFor={rangeFor} onEmpty={canBook ? (d) => openNewBooking({ startAt: d + 10 * 3600_000 }) : undefined} />
       ) : view === "month" ? (
         <MonthView
           from={from}
           anchor={anchor}
           byDay={byDay}
+          leadsByDay={leadsByDay}
           rangeFor={rangeFor}
           onPick={(d) => {
             setAnchor(d);
@@ -190,6 +231,7 @@ export default function CalendarPage() {
         <TimeGrid
           days={view === "day" ? [anchor] : Array.from({ length: 7 }, (_, i) => addDaysEAT(from, i))}
           byDay={byDay}
+          leadsByDay={leadsByDay}
           now={now}
           rangeFor={rangeFor}
           onSlot={(startAt) => openNewBooking({ startAt })}
@@ -203,10 +245,12 @@ function DateStrip({
   anchor,
   onPick,
   marked,
+  leadMarked,
 }: {
   anchor: number;
   onPick: (d: number) => void;
   marked: Map<string, BookingSummary[]>;
+  leadMarked: Map<string, LeadEntry[]>;
 }) {
   const start = mondayOf(anchor);
   const todayKey = dateKeyEAT(Date.now());
@@ -215,6 +259,8 @@ function DateStrip({
       {Array.from({ length: 7 }, (_, i) => addDaysEAT(start, i)).map((d) => {
         const key = dateKeyEAT(d);
         const sel = key === dateKeyEAT(anchor);
+        const hasBooking = !!marked.get(key)?.length;
+        const hasLead = !!leadMarked.get(key)?.length;
         return (
           <button
             key={key}
@@ -226,10 +272,10 @@ function DateStrip({
             <span className={cn("text-subhead font-semibold tabular", key === todayKey && !sel && "text-accent-fg")}>
               {formatEAT(d, "d")}
             </span>
-            <span
-              className={cn("size-1 rounded-full", marked.get(key)?.length ? (sel ? "bg-bg" : "bg-fg-2") : "bg-transparent")}
-              aria-hidden
-            />
+            <span className="flex h-1 items-center gap-0.5" aria-hidden>
+              {hasBooking && <span className={cn("size-1 rounded-full", sel ? "bg-bg" : "bg-fg-2")} />}
+              {hasLead && <span className={cn("size-1 rounded-full", sel ? "bg-bg/70" : "bg-accent")} />}
+            </span>
           </button>
         );
       })}
@@ -246,16 +292,30 @@ function RangeBand({ r }: { r: Range }) {
   );
 }
 
+function LeadAgendaRow({ l }: { l: LeadEntry }) {
+  return (
+    <Link href={`/leads/${l._id}`} className="flex items-center justify-between gap-3 py-3 hover:bg-hover">
+      <span className="flex min-w-0 items-center gap-2">
+        <UserPlus className="size-4 shrink-0 text-accent" aria-hidden />
+        <span className="truncate font-medium">{l.name}</span>
+      </span>
+      <span className="shrink-0 text-caption text-fg-3">Promised to book</span>
+    </Link>
+  );
+}
+
 function Agenda({
   from,
   days,
   byDay,
+  leadsByDay,
   rangeFor,
   onEmpty,
 }: {
   from: number;
   days: number;
   byDay: Map<string, BookingSummary[]>;
+  leadsByDay: Map<string, LeadEntry[]>;
   rangeFor: (d: number) => Range | undefined;
   onEmpty?: (d: number) => void;
 }) {
@@ -265,6 +325,7 @@ function Agenda({
       {list.map((d) => {
         const key = dateKeyEAT(d);
         const items = [...(byDay.get(key) ?? [])].sort((a, b) => a.startAt - b.startAt);
+        const leads = leadsByDay.get(key) ?? [];
         const r = rangeFor(d);
         return (
           <li key={key}>
@@ -281,7 +342,7 @@ function Agenda({
                 <RangeBand r={r} />
               </div>
             )}
-            {items.length ? (
+            {items.length > 0 && (
               <ul className="flex flex-col divide-y divide-line">
                 {items.map((s, i) => (
                   <li key={s._id}>
@@ -289,16 +350,23 @@ function Agenda({
                   </li>
                 ))}
               </ul>
-            ) : (
-              !r &&
-              onEmpty && (
-                <button
-                  onClick={() => onEmpty(d)}
-                  className="w-full rounded-md border border-dashed border-line px-3 py-3 text-left text-label text-fg-3 hover:bg-hover"
-                >
-                  Free · tap to book
-                </button>
-              )
+            )}
+            {leads.length > 0 && (
+              <ul className="flex flex-col divide-y divide-line">
+                {leads.map((l) => (
+                  <li key={l._id}>
+                    <LeadAgendaRow l={l} />
+                  </li>
+                ))}
+              </ul>
+            )}
+            {items.length === 0 && leads.length === 0 && !r && onEmpty && (
+              <button
+                onClick={() => onEmpty(d)}
+                className="w-full rounded-md border border-dashed border-line px-3 py-3 text-left text-label text-fg-3 hover:bg-hover"
+              >
+                Free · tap to book
+              </button>
             )}
           </li>
         );
@@ -310,12 +378,14 @@ function Agenda({
 function TimeGrid({
   days,
   byDay,
+  leadsByDay,
   now,
   rangeFor,
   onSlot,
 }: {
   days: number[];
   byDay: Map<string, BookingSummary[]>;
+  leadsByDay: Map<string, LeadEntry[]>;
   now: number;
   rangeFor: (d: number) => Range | undefined;
   onSlot: (startAt: number) => void;
@@ -332,14 +402,31 @@ function TimeGrid({
         <div className="border-b border-line bg-elevated" />
         {days.map((d) => {
           const key = dateKeyEAT(d);
+          const leads = leadsByDay.get(key) ?? [];
           return (
             <div key={key} className="border-b border-l border-line bg-elevated px-2 py-2 text-center">
-              <span className="text-caption text-fg-2">{formatEAT(d, "EEE")}</span>{" "}
-              <span
-                className={cn("text-label font-semibold tabular", key === todayKey && "rounded-full bg-accent px-1.5 text-on-accent")}
-              >
-                {formatEAT(d, "d")}
-              </span>
+              <div>
+                <span className="text-caption text-fg-2">{formatEAT(d, "EEE")}</span>{" "}
+                <span
+                  className={cn("text-label font-semibold tabular", key === todayKey && "rounded-full bg-accent px-1.5 text-on-accent")}
+                >
+                  {formatEAT(d, "d")}
+                </span>
+              </div>
+              {leads.length > 0 && (
+                <div className="mt-1 flex flex-col gap-0.5">
+                  {leads.map((l) => (
+                    <Link
+                      key={l._id}
+                      href={`/leads/${l._id}`}
+                      className="flex items-center gap-1 truncate rounded-sm border border-dashed border-line-strong px-1 py-0.5 text-caption text-fg-2 hover:bg-hover"
+                    >
+                      <UserPlus className="size-3 shrink-0 text-accent" aria-hidden />
+                      <span className="truncate">{l.name}</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}
@@ -402,12 +489,14 @@ function MonthView({
   from,
   anchor,
   byDay,
+  leadsByDay,
   rangeFor,
   onPick,
 }: {
   from: number;
   anchor: number;
   byDay: Map<string, BookingSummary[]>;
+  leadsByDay: Map<string, LeadEntry[]>;
   rangeFor: (d: number) => Range | undefined;
   onPick: (d: number) => void;
 }) {
@@ -423,6 +512,7 @@ function MonthView({
       {Array.from({ length: 42 }, (_, i) => addDaysEAT(from, i)).map((d) => {
         const key = dateKeyEAT(d);
         const items = [...(byDay.get(key) ?? [])].sort((a, b) => a.startAt - b.startAt);
+        const leads = leadsByDay.get(key) ?? [];
         const inMonth = toEAT(d).month === month;
         const r = rangeFor(d);
         return (
@@ -448,6 +538,16 @@ function MonthView({
               </span>
             ))}
             {items.length > 3 && <span className="text-caption text-fg-3">+{items.length - 3} more</span>}
+            {leads.slice(0, 2).map((l) => (
+              <span
+                key={l._id}
+                className="flex items-center gap-1 truncate rounded-sm border border-dashed border-line-strong px-1 text-caption text-fg-2"
+              >
+                <UserPlus className="size-3 shrink-0 text-accent" aria-hidden />
+                <span className="truncate">{l.name}</span>
+              </span>
+            ))}
+            {leads.length > 2 && <span className="text-caption text-fg-3">+{leads.length - 2} leads</span>}
           </button>
         );
       })}
