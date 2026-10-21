@@ -130,6 +130,12 @@ export default defineSchema({
     lastContactedAt: v.optional(v.number()),
     // + the day they promised to book / we agreed to follow up (epoch ms, EAT day start)
     remindAt: v.optional(v.number()),
+    // + rough quote / expected spend for this lead (whole KES)
+    price: v.optional(v.number()),
+    // + a follow-up date that spawns a studio task; followUpTaskId links the task we created so
+    // re-saving updates it instead of duplicating, and clearing/deleting the lead removes it.
+    followUpAt: v.optional(v.number()),
+    followUpTaskId: v.optional(v.id("tasks")),
     // + reference images they sent (tattoo ideas, placement photos, screenshots)
     images: v.optional(v.array(v.id("_storage"))),
     createdBy: v.id("staff"),

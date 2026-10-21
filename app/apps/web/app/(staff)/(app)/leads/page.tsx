@@ -1,6 +1,6 @@
 "use client";
 import { api } from "@drink/backend/api";
-import { addDaysEAT, formatDateShort, LEAD_STATUS_LABEL, SOURCES, startOfDayEAT, waLink, type LeadStatus } from "@drink/shared";
+import { addDaysEAT, formatDateShort, formatKes, LEAD_STATUS_LABEL, SOURCES, startOfDayEAT, waLink, type LeadStatus } from "@drink/shared";
 import { usePaginatedQuery, useQuery } from "convex/react";
 import { AtSign, CalendarClock, Music2, Phone, Plus, Search, Send } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -77,16 +77,31 @@ function LeadCard({ l, i, onOpen }: { l: Row; i: number; onOpen: () => void }) {
         </p>
       </div>
 
-      {l.remindAt != null && (
-        <span
-          className={cn(
-            "inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-caption font-medium",
-            remindDue ? "bg-accent-subtle text-accent-fg" : "border border-line-strong text-fg-2",
+      {(l.price != null || l.remindAt != null) && (
+        <div className="flex flex-wrap gap-1.5">
+          {l.price != null && (
+            <span className="money inline-flex w-fit items-center rounded-full border border-line-strong px-2.5 py-1 text-caption font-semibold text-fg">
+              {formatKes(l.price)}
+            </span>
           )}
-        >
-          <CalendarClock className="size-3.5" aria-hidden />
-          Books {formatDateShort(l.remindAt)}
-        </span>
+          {l.remindAt != null && (
+            <span
+              className={cn(
+                "inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-caption font-medium",
+                remindDue ? "bg-accent-subtle text-accent-fg" : "border border-line-strong text-fg-2",
+              )}
+            >
+              <CalendarClock className="size-3.5" aria-hidden />
+              Books {formatDateShort(l.remindAt)}
+            </span>
+          )}
+        </div>
+      )}
+
+      {l.note && (
+        <p className="line-clamp-2 rounded-lg rounded-tl-sm bg-hover px-3 py-2 text-caption text-fg-2">
+          {l.note}
+        </p>
       )}
 
       {l.images.length > 0 && (

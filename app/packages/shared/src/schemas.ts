@@ -70,6 +70,9 @@ export const leadInputSchema = z
     source: z.enum(SOURCES.map((s) => s.value) as [string, ...string[]]).optional(),
     note: optionalText(2000),
     remindAt: z.number().int().positive().optional(),
+    price: z.number().int("Whole shillings only").nonnegative().optional(),
+    // Set to spawn a follow-up task due this day; the mutation keeps the task in sync.
+    followUpAt: z.number().int().positive().optional(),
   })
   .refine((d) => !!(d.name || d.phone || d.instagram || d.tiktok), {
     message: "Add a phone, an @handle or a name",

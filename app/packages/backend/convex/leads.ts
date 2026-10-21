@@ -23,7 +23,14 @@ const leadArgs = {
   source: v.optional(v.string()),
   note: v.optional(v.string()),
   remindAt: v.optional(v.number()),
+  price: v.optional(v.number()),
+  followUpAt: v.optional(v.number()),
 };
+
+/** A short human name for a lead, used as the follow-up task title. */
+function leadLabel(l: { name?: string; phone?: string; instagram?: string; tiktok?: string }) {
+  return l.name || l.phone || (l.instagram ? `@${l.instagram}` : l.tiktok ? `@${l.tiktok}` : "lead");
+}
 
 async function row(ctx: QueryCtx, l: Doc<"leads">) {
   const images = (
@@ -43,6 +50,8 @@ async function row(ctx: QueryCtx, l: Doc<"leads">) {
     convertedClientId: l.convertedClientId ?? null,
     lastContactedAt: l.lastContactedAt ?? null,
     remindAt: l.remindAt ?? null,
+    price: l.price ?? null,
+    followUpAt: l.followUpAt ?? null,
     images,
   };
 }
@@ -115,6 +124,18 @@ export const create = mutation({
       status: "new",
       createdBy: staff._id,
     });
+    // A follow-up date spawns a studio task due that day, linked back so edits stay in sync.
+    if (parsed.data.followUpAt) {
+      const taskId = await ctx.db.insert("tasks", {
+        title: `Follow up with ${leadLabel(parsed.data)}`,
+        due: parsed.data.followUpAt,
+        done: false,
+        checklist: [],
+        clientIds: [],
+        createdBy: staff._id,
+      });
+      await ctx.db.patch(leadId, { followUpTaskId: taskId });
+    }
     await audit(ctx, staff._id, "leads", leadId, "created");
     return leadId;
   },
@@ -134,6 +155,8 @@ export const update = mutation({
       source: l.source,
       note: l.note,
       remindAt: l.remindAt,
+      price: l.price,
+      followUpAt: l.followUpAt,
       ...patch,
     };
     const parsed = leadInputSchema.safeParse(merged);
@@ -144,7 +167,33 @@ export const update = mutation({
       const kept = new Set<string>(images);
       for (const id of l.images ?? []) if (!kept.has(id)) await ctx.storage.delete(id);
     }
-    await ctx.db.patch(leadId, { ...parsed.data, ...(images !== undefined ? { images } : {}) });
+    // Keep the follow-up task in step with the date: create one, re-date the existing one, or
+    // drop it when the date is cleared (leaving it alone if it's already been ticked done).
+    let followUpTaskId = l.followUpTaskId;
+    if (parsed.data.followUpAt) {
+      const existing = followUpTaskId ? await ctx.db.get(followUpTaskId) : null;
+      if (existing) {
+        await ctx.db.patch(existing._id, { due: parsed.data.followUpAt });
+      } else {
+        followUpTaskId = await ctx.db.insert("tasks", {
+          title: `Follow up with ${leadLabel(parsed.data)}`,
+          due: parsed.data.followUpAt,
+          done: false,
+          checklist: [],
+          clientIds: l.convertedClientId ? [l.convertedClientId] : [],
+          createdBy: staff._id,
+        });
+      }
+    } else if (followUpTaskId) {
+      const existing = await ctx.db.get(followUpTaskId);
+      if (existing && !existing.done) await ctx.db.delete(followUpTaskId);
+      followUpTaskId = undefined;
+    }
+    await ctx.db.patch(leadId, {
+      ...parsed.data,
+      ...(images !== undefined ? { images } : {}),
+      followUpTaskId,
+    });
     await audit(ctx, staff._id, "leads", leadId, "updated", patch);
   },
 });
@@ -208,6 +257,13 @@ export const convert = mutation({
       });
     }
     await ctx.db.patch(leadId, { status: "converted", convertedClientId: clientId });
+    // Point any open follow-up task at the new client so it shows up on their record.
+    if (l.followUpTaskId) {
+      const task = await ctx.db.get(l.followUpTaskId);
+      if (task && !task.clientIds.includes(clientId)) {
+        await ctx.db.patch(task._id, { clientIds: [...task.clientIds, clientId] });
+      }
+    }
     await audit(ctx, staff._id, "leads", leadId, "converted", { clientId, existing: !!clash });
     return clientId;
   },
@@ -221,6 +277,11 @@ export const remove = mutation({
     if (!l) return;
     // Converted leads share their images with the client record — leave that storage alone.
     if (!l.convertedClientId) for (const id of l.images ?? []) await ctx.storage.delete(id);
+    // Drop the spawned follow-up task unless it's already been ticked done.
+    if (l.followUpTaskId) {
+      const task = await ctx.db.get(l.followUpTaskId);
+      if (task && !task.done) await ctx.db.delete(l.followUpTaskId);
+    }
     await ctx.db.delete(leadId);
     await audit(ctx, staff._id, "leads", leadId, "deleted");
   },

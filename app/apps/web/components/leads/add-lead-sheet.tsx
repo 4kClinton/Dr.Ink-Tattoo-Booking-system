@@ -9,16 +9,17 @@ import { ImageUploader, type Thumb } from "@/components/booking/image-uploader";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FieldShell, Input, Select, Textarea } from "@/components/ui/field";
-import { PhoneInput } from "@/components/ui/money-input";
+import { MoneyInput, PhoneInput } from "@/components/ui/money-input";
 import { Sheet } from "@/components/ui/sheet";
 import { toAppError } from "@/lib/errors";
 
-const empty = { name: "", phone: "", instagram: "", tiktok: "", source: "", note: "", remindAt: "" };
+const empty = { name: "", phone: "", instagram: "", tiktok: "", source: "", note: "", remindAt: "", followUp: "" };
 
 /** Capture a new lead: who they are and where they came from. */
 export function AddLeadSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const create = useMutation(api.leads.create);
   const [f, setF] = useState(empty);
+  const [price, setPrice] = useState<number | null>(null);
   const [images, setImages] = useState<Thumb[]>([]);
   const [busy, setBusy] = useState(false);
 
@@ -26,6 +27,7 @@ export function AddLeadSheet({ open, onOpenChange }: { open: boolean; onOpenChan
 
   function reset() {
     setF(empty);
+    setPrice(null);
     setImages([]);
   }
 
@@ -40,6 +42,8 @@ export function AddLeadSheet({ open, onOpenChange }: { open: boolean; onOpenChan
         source: f.source || undefined,
         note: f.note.trim() || undefined,
         remindAt: f.remindAt ? fromDateKey(f.remindAt) : undefined,
+        price: price ?? undefined,
+        followUpAt: f.followUp ? fromDateKey(f.followUp) : undefined,
         images: images.length ? images.map((t) => t.id as Id<"_storage">) : undefined,
       });
       toast("Lead saved");
@@ -80,12 +84,20 @@ export function AddLeadSheet({ open, onOpenChange }: { open: boolean; onOpenChan
             </option>
           ))}
         </Select>
+        <MoneyInput label="Price" optional hint="Rough quote or expected spend." value={price} onValueChange={setPrice} />
         <DatePicker
           label="Promised to book"
           optional
           hint="If they said they'd book on a certain day, set it here to follow up."
           value={f.remindAt}
           onChange={(remindAt) => setF({ ...f, remindAt })}
+        />
+        <DatePicker
+          label="Follow up on"
+          optional
+          hint="Creates a task due this day so you don't forget to chase them."
+          value={f.followUp}
+          onChange={(followUp) => setF({ ...f, followUp })}
         />
         <Textarea label="Note" optional rows={3} value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} />
         <FieldShell label="Images" optional hint="Tattoo ideas or screenshots they sent. These carry over when you convert them to a client.">

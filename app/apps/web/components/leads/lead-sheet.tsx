@@ -11,7 +11,7 @@ import { ImageUploader, type Thumb } from "@/components/booking/image-uploader";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FieldShell, Input, Select, Textarea } from "@/components/ui/field";
-import { PhoneInput } from "@/components/ui/money-input";
+import { MoneyInput, PhoneInput } from "@/components/ui/money-input";
 import { Segmented } from "@/components/ui/segmented";
 import { ConfirmSheet, Sheet } from "@/components/ui/sheet";
 import { toAppError } from "@/lib/errors";
@@ -27,6 +27,8 @@ export interface LeadRow {
   status: LeadStatus;
   convertedClientId: string | null;
   remindAt: number | null;
+  price: number | null;
+  followUpAt: number | null;
   images: { id: string; url: string }[];
 }
 
@@ -54,6 +56,8 @@ export function LeadSheet({
   const [source, setSource] = useState(lead?.source ?? "");
   const [note, setNote] = useState(lead?.note ?? "");
   const [remindAt, setRemindAt] = useState(lead?.remindAt ? dateKeyEAT(lead.remindAt) : "");
+  const [price, setPrice] = useState<number | null>(lead?.price ?? null);
+  const [followUp, setFollowUp] = useState(lead?.followUpAt ? dateKeyEAT(lead.followUpAt) : "");
   const [images, setImages] = useState<Thumb[]>(lead?.images ?? []);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -73,6 +77,8 @@ export function LeadSheet({
         source: source || undefined,
         note: note.trim() || undefined,
         remindAt: remindAt ? fromDateKey(remindAt) : undefined,
+        price: price ?? undefined,
+        followUpAt: followUp ? fromDateKey(followUp) : undefined,
         images: images.map((t) => t.id as Id<"_storage">),
       });
       toast("Lead saved");
@@ -168,12 +174,20 @@ export function LeadSheet({
               </option>
             ))}
           </Select>
+          <MoneyInput label="Price" optional hint="Rough quote or expected spend." value={price} onValueChange={setPrice} />
           <DatePicker
             label="Promised to book"
             optional
             hint="The day they said they'd book — shows on the lead card so you can follow up."
             value={remindAt}
             onChange={setRemindAt}
+          />
+          <DatePicker
+            label="Follow up on"
+            optional
+            hint="Creates a task due this day so you don't forget to chase them. Clearing it removes the task."
+            value={followUp}
+            onChange={setFollowUp}
           />
           <Textarea label="Note" optional rows={3} value={note} onChange={(e) => setNote(e.target.value)} />
           <FieldShell label="Images" optional hint="Carry over to the client record when you convert this lead.">
