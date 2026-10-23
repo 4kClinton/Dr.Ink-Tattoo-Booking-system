@@ -203,6 +203,7 @@ export default function CalendarPage() {
                 : [
                     { value: "agenda", label: "Agenda" },
                     { value: "day", label: "Day" },
+                    { value: "month", label: "Month" },
                   ]
             }
           />
@@ -520,7 +521,7 @@ function MonthView({
             key={key}
             onClick={() => onPick(d)}
             className={cn(
-              "flex min-h-28 flex-col gap-1 border-b border-l border-line p-1.5 text-left hover:bg-hover",
+              "flex min-h-20 flex-col gap-1 border-b border-l border-line p-1 text-left hover:bg-hover sm:min-h-28 sm:p-1.5",
               !inMonth && "opacity-40",
               r && "hatched",
             )}
@@ -529,25 +530,38 @@ function MonthView({
               {formatEAT(d, "d")}
             </span>
             {r && <span className="truncate text-caption text-fg-2">{rangeLabel(r)}</span>}
-            {items.slice(0, 3).map((s) => (
-              <span
-                key={s._id}
-                className={cn("truncate rounded-sm bg-surface px-1 text-caption", s.status === "cancelled" && "text-fg-3 line-through")}
-              >
-                {formatTime24(s.startAt)} {s.clientName}
+            {/* On phones the 7-col grid is too narrow for text — show dots; full labels from sm up. */}
+            {(items.length > 0 || leads.length > 0) && (
+              <span className="flex flex-wrap gap-0.5 sm:hidden" aria-hidden>
+                {items.slice(0, 4).map((s) => (
+                  <span key={s._id} className={cn("size-1.5 rounded-full", s.status === "cancelled" ? "bg-fg-3" : "bg-fg-2")} />
+                ))}
+                {leads.slice(0, 2).map((l) => (
+                  <span key={l._id} className="size-1.5 rounded-full bg-accent" />
+                ))}
               </span>
-            ))}
-            {items.length > 3 && <span className="text-caption text-fg-3">+{items.length - 3} more</span>}
-            {leads.slice(0, 2).map((l) => (
-              <span
-                key={l._id}
-                className="flex items-center gap-1 truncate rounded-sm border border-dashed border-line-strong px-1 text-caption text-fg-2"
-              >
-                <UserPlus className="size-3 shrink-0 text-accent" aria-hidden />
-                <span className="truncate">{l.name}</span>
-              </span>
-            ))}
-            {leads.length > 2 && <span className="text-caption text-fg-3">+{leads.length - 2} leads</span>}
+            )}
+            <span className="hidden flex-col gap-1 sm:flex">
+              {items.slice(0, 3).map((s) => (
+                <span
+                  key={s._id}
+                  className={cn("truncate rounded-sm bg-surface px-1 text-caption", s.status === "cancelled" && "text-fg-3 line-through")}
+                >
+                  {formatTime24(s.startAt)} {s.clientName}
+                </span>
+              ))}
+              {items.length > 3 && <span className="text-caption text-fg-3">+{items.length - 3} more</span>}
+              {leads.slice(0, 2).map((l) => (
+                <span
+                  key={l._id}
+                  className="flex items-center gap-1 truncate rounded-sm border border-dashed border-line-strong px-1 text-caption text-fg-2"
+                >
+                  <UserPlus className="size-3 shrink-0 text-accent" aria-hidden />
+                  <span className="truncate">{l.name}</span>
+                </span>
+              ))}
+              {leads.length > 2 && <span className="text-caption text-fg-3">+{leads.length - 2} leads</span>}
+            </span>
           </button>
         );
       })}
