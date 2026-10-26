@@ -1,5 +1,5 @@
 import { getAuthUserId, invalidateSessions, modifyAccountCredentials, retrieveAccount } from "@convex-dev/auth/server";
-import { firstName, isPermission, MANAGER_DEFAULTS, normalizeKenyanPhone, permissionsFor, DAY_MS } from "@drink/shared";
+import { firstName, isPermission, MANAGER_DEFAULTS, normalizePhone, permissionsFor, DAY_MS } from "@drink/shared";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -120,8 +120,8 @@ export const invite = mutation({
     const artist = await requireStaff(ctx, ["artist"]);
     const email = args.email.trim().toLowerCase();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) fail("INVALID", "Enter a valid email.");
-    const phone = normalizeKenyanPhone(args.phone);
-    if (!phone) fail("INVALID", "Enter a Kenyan mobile number.");
+    const phone = normalizePhone(args.phone);
+    if (!phone) fail("INVALID", "Enter a valid phone number.");
     const name = args.name.trim();
     if (name.length < 2) fail("INVALID", "Enter their name.");
 
@@ -228,8 +228,8 @@ export const updateMe = mutation({
   args: { name: v.string(), phone: v.string() },
   handler: async (ctx, args) => {
     const me = await requireStaff(ctx);
-    const phone = normalizeKenyanPhone(args.phone);
-    if (!phone) fail("INVALID", "Enter a Kenyan mobile number.");
+    const phone = normalizePhone(args.phone);
+    if (!phone) fail("INVALID", "Enter a valid phone number.");
     await ctx.db.patch(me._id, { name: args.name.trim() || me.name, phone });
     await audit(ctx, me._id, "staff", me._id, "updated", { name: args.name, phone });
   },

@@ -21,7 +21,7 @@ export function MoneyInput({
   );
 }
 
-/** Fixed +254 prefix, tel keypad. Accepts 0712…, 712…, +254712… — normalised server-side too. */
+/** Tel keypad. Accepts 0712…, 712…, +254712…, or any +<country code> number — normalised server-side too. */
 export function PhoneInput(props: Omit<InputProps, "prefix">) {
-  return <Input {...props} prefix="+254" inputMode="tel" autoComplete="tel" placeholder="712 345 678" />;
+  return <Input {...props} inputMode="tel" autoComplete="tel" placeholder="0712 345 678 or +44…" />;
 }

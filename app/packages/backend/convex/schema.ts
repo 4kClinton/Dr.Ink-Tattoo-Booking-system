@@ -91,7 +91,7 @@ export default defineSchema({
 
   clients: defineTable({
     fullName: v.string(),
-    phone: v.string(), // E.164 +2547…
+    phone: v.string(), // E.164, e.g. +2547… or +44…
     email: v.optional(v.string()),
     instagram: v.optional(v.string()),
     dateOfBirth: v.optional(v.string()), // YYYY-MM-DD

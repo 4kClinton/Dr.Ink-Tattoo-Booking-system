@@ -4,7 +4,7 @@ import {
   formatPhone,
   leadInputSchema,
   LEAD_STATUSES,
-  normalizeKenyanPhone,
+  normalizePhone,
 } from "@drink/shared";
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
@@ -45,7 +45,7 @@ async function row(ctx: QueryCtx, l: Doc<"leads">) {
     createdAt: l._creationTime,
     name: l.name ?? null,
     phone: l.phone ?? null,
-    phoneDisplay: l.phone ? (l.phone.startsWith("+254") ? formatPhone(l.phone) : l.phone) : null,
+    phoneDisplay: l.phone ? formatPhone(l.phone) : null,
     instagram: l.instagram ?? null,
     tiktok: l.tiktok ?? null,
     source: l.source ?? null,
@@ -86,7 +86,7 @@ export const search = query({
     if (term.length < 2) return [];
     const found = new Map<Id<"leads">, Doc<"leads">>();
 
-    const phone = normalizeKenyanPhone(term);
+    const phone = normalizePhone(term);
     if (phone) {
       const rows = await ctx.db.query("leads").withIndex("by_phone", (x) => x.eq("phone", phone)).take(10);
       rows.forEach((l) => found.set(l._id, l));
@@ -267,7 +267,7 @@ export const setStatus = mutation({
 });
 
 /**
- * Turn a lead into a real client. Needs a full name and a valid Kenyan mobile — the same
+ * Turn a lead into a real client. Needs a full name and a valid phone number — the same
  * rules as adding a client directly. Marks the lead converted and links the new client.
  */
 export const convert = mutation({

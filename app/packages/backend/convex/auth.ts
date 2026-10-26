@@ -1,6 +1,6 @@
 import { Password } from "@convex-dev/auth/providers/Password";
 import { convexAuth } from "@convex-dev/auth/server";
-import { normalizeKenyanPhone } from "@drink/shared";
+import { normalizePhone } from "@drink/shared";
 import type { MutationCtx } from "./_generated/server";
 import { fail } from "./lib/errors";
 import { hashSecret, verifySecret } from "./lib/passwordHash";
@@ -33,7 +33,7 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
       const anyStaff = await ctx.db.query("staff").first();
 
       if (!anyStaff) {
-        const phone = normalizeKenyanPhone(String(profile.phone ?? ""));
+        const phone = normalizePhone(String(profile.phone ?? ""));
         if (!phone) fail("INVALID", "Enter your mobile number so the system can text you.");
         const staffId = await ctx.db.insert("staff", {
           userId,

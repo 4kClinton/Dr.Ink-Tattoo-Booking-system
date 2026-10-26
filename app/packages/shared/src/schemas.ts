@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { BOOKING_EXTRA_VALUES, COLOURS, EXPENSE_CATEGORY_VALUES, HEALTH_QUESTIONS, LOCATIONS, MAX_TATTOOS_PER_BOOKING, SIZES, SOURCES } from "./constants";
 import { isValidMpesaCode } from "./mpesa";
-import { normalizeKenyanPhone } from "./phone";
+import { normalizePhone } from "./phone";
 
 /**
  * Shared validation — the same schemas run in the browser (react-hook-form)
@@ -25,9 +25,9 @@ export const phoneSchema = z
   .string()
   .trim()
   .transform((v, ctx) => {
-    const n = normalizeKenyanPhone(v);
+    const n = normalizePhone(v);
     if (!n) {
-      ctx.addIssue({ code: "custom", message: "Enter a Kenyan mobile number, e.g. 0712 345 678" });
+      ctx.addIssue({ code: "custom", message: "Enter a valid phone number, e.g. 0712 345 678 or +44 7911 123456" });
       return z.NEVER;
     }
     return n;
@@ -59,8 +59,8 @@ export type ClientInput = z.input<typeof clientInputSchema>;
  * A lead is a prospect captured from anywhere (DMs, walk-up, referral) before they're
  * a client. Everything is optional except that *something* identifying must be present —
  * a phone, an Instagram/TikTok handle, or at least a name. Phone is normalised to E.164
- * when it's a valid Kenyan mobile, otherwise the typed digits are kept as-is so foreign
- * or partial numbers aren't rejected.
+ * when it's a valid number, otherwise the typed digits are kept as-is so partial numbers
+ * aren't rejected.
  */
 const handle = optionalText(80).transform((v) => v?.replace(/^@/, "").replace(/^https?:\/\/\S+\//, "").replace(/\/$/, ""));
 export const leadInputSchema = z
@@ -73,7 +73,7 @@ export const leadInputSchema = z
       .optional()
       .transform((v) => {
         if (!v) return undefined;
-        return normalizeKenyanPhone(v) ?? v.replace(/[^\d+]/g, "");
+        return normalizePhone(v) ?? v.replace(/[^\d+]/g, "");
       }),
     instagram: handle,
     tiktok: handle,

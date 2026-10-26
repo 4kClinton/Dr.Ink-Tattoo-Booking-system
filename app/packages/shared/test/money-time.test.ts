@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   addDaysEAT, ageOn, applyQuietHours, atHourEAT, computeDepositRequired, dateKeyEAT, followUpTime,
-  formatDateShort, formatKes, formatTime12, formatTime24, fromEATParts, normalizeKenyanPhone,
+  formatDateShort, formatKes, formatTime12, formatTime24, fromEATParts, normalizeKenyanPhone, normalizePhone,
   parseKes, reminderTime, shortName, startOfDayEAT, toEAT,
 } from "../src";
 
@@ -86,6 +86,19 @@ describe("phones and names", () => {
     expect(normalizeKenyanPhone("0712345678")).toBe("+254712345678");
     expect(normalizeKenyanPhone("0212345678")).toBeNull();
     expect(normalizeKenyanPhone("12345")).toBeNull();
+  });
+  it("normalises international numbers to E.164", () => {
+    expect(normalizePhone("0712 345 678")).toBe("+254712345678");
+    expect(normalizePhone("+254 712 345 678")).toBe("+254712345678");
+    expect(normalizePhone("00254712345678")).toBe("+254712345678");
+    expect(normalizePhone("+44 7911 123456")).toBe("+447911123456");
+    expect(normalizePhone("0044 7911 123456")).toBe("+447911123456");
+    expect(normalizePhone("+1 (415) 555-2671")).toBe("+14155552671");
+    expect(normalizePhone("+255 712 345 678")).toBe("+255712345678");
+    expect(normalizePhone("+254212345678")).toBeNull(); // Kenyan rules still apply to +254
+    expect(normalizePhone("+12345")).toBeNull();
+    expect(normalizePhone("+1234567890123456")).toBeNull();
+    expect(normalizePhone("447911123456")).toBeNull(); // no + → read as Kenyan
   });
   it("shortens names", () => {
     expect(shortName("Wanjiru Kamau")).toBe("Wanjiru K.");

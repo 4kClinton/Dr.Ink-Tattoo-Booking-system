@@ -328,7 +328,7 @@ export function NewBookingSheet({
                 label="Phone"
                 value={newClient.phone}
                 onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
-                hint="0712…, 712… or +254712… all work."
+                hint="0712…, 712… or +254712… all work. Foreign numbers: include the country code, e.g. +44…"
               />
               <Input
                 label="Instagram"

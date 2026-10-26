@@ -1,7 +1,7 @@
 "use client";
 import { api } from "@drink/backend/api";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { normalizeKenyanPhone } from "@drink/shared";
+import { normalizePhone } from "@drink/shared";
 import { useConvex, useConvexAuth } from "convex/react";
 import { AlertCircle } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -79,8 +79,8 @@ function SignInInner() {
     setError(null);
     const fd = new FormData(e.currentTarget);
     if (mode === "setup") {
-      const phone = normalizeKenyanPhone(String(fd.get("phone") ?? ""));
-      if (!phone) return setError("Enter a Kenyan mobile number, e.g. 0712 345 678.");
+      const phone = normalizePhone(String(fd.get("phone") ?? ""));
+      if (!phone) return setError("Enter a valid phone number, e.g. 0712 345 678.");
       fd.set("phone", phone);
     }
     if (mode !== "signIn" && String(fd.get("password")).length < 8) {

@@ -1,4 +1,4 @@
-import { clientInputSchema, firstIssue, formatPhone, normalizeKenyanPhone } from "@drink/shared";
+import { clientInputSchema, firstIssue, formatPhone, normalizePhone } from "@drink/shared";
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -40,14 +40,16 @@ export const search = query({
     if (term.length < 2) return [];
     const found = new Map<Id<"clients">, Doc<"clients">>();
 
-    const phone = normalizeKenyanPhone(term);
+    const phone = normalizePhone(term);
     if (phone) {
       const c = await ctx.db.query("clients").withIndex("by_phone", (x) => x.eq("phone", phone)).unique();
       if (c) found.set(c._id, c);
     } else if (/^[+\d\s]{4,}$/.test(term)) {
       // partial phone: prefix-scan the E.164 index
-      const digits = term.replace(/\D/g, "").replace(/^0/, "").replace(/^254/, "");
-      const prefix = `+254${digits}`;
+      // "+44…" / "0044…" scan foreign numbers as typed; anything else is a Kenyan local prefix.
+      const intl = /^(\+|00)/.test(term) && !/^(\+|00)254/.test(term.replace(/\s/g, ""));
+      const digits = term.replace(/\D/g, "");
+      const prefix = intl ? `+${digits.replace(/^00/, "")}` : `+254${digits.replace(/^0/, "").replace(/^254/, "")}`;
       const rows = await ctx.db
         .query("clients")
         .withIndex("by_phone", (x) => x.gte("phone", prefix).lt("phone", prefix + "￿"))
