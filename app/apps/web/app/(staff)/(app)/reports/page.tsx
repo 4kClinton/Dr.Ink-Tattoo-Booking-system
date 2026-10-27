@@ -1,45 +1,32 @@
 "use client";
 import { api } from "@drink/backend/api";
-import { addDaysEAT, dateKeyEAT, formatEAT, formatKes, fromDateKey, startOfDayEAT, toEAT } from "@drink/shared";
+import { dateKeyEAT, formatEAT, formatKes } from "@drink/shared";
 import { useConvex, useQuery } from "convex/react";
-import { Download } from "lucide-react";
-import { useMemo, useState } from "react";
+import { ChevronRight, Download } from "lucide-react";
+import Link from "next/link";
+import { Suspense, useState } from "react";
 import { toast } from "sonner";
 import { useCan } from "@/components/shell/viewer";
 import { Button } from "@/components/ui/button";
 import { Card, SectionLabel } from "@/components/ui/card";
-import { Input } from "@/components/ui/field";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Empty, PageTitle, Skeleton } from "@/components/ui/misc";
-import { Segmented } from "@/components/ui/segmented";
 import { downloadCsv } from "@/lib/csv";
-
-type Period = "week" | "month" | "custom";
-
-function periodRange(p: Period, custom: { from: string; to: string }) {
-  const today = startOfDayEAT(Date.now());
-  if (p === "week") {
-    const mon = addDaysEAT(today, -((toEAT(today).weekday + 6) % 7));
-    return { from: mon, to: addDaysEAT(mon, 7) };
-  }
-  if (p === "month") {
-    const t = toEAT(today);
-    const from = fromDateKey(`${t.year}-${String(t.month).padStart(2, "0")}-01`);
-    const nm = t.month === 12 ? `${t.year + 1}-01-01` : `${t.year}-${String(t.month + 1).padStart(2, "0")}-01`;
-    return { from, to: fromDateKey(nm) };
-  }
-  return { from: fromDateKey(custom.from), to: addDaysEAT(fromDateKey(custom.to), 1) };
-}
+import { useReportRange } from "@/lib/report-range";
 
 export default function ReportsPage() {
+  return (
+    <Suspense>
+      <Reports />
+    </Suspense>
+  );
+}
+
+function Reports() {
   const canView = useCan("reports.view");
   const canExport = useCan("exports.csv");
-  const [period, setPeriod] = useState<Period>("month");
-  const [custom, setCustom] = useState(() => ({
-    from: dateKeyEAT(addDaysEAT(Date.now(), -90)),
-    to: dateKeyEAT(Date.now()),
-  }));
-  const { from, to } = useMemo(() => periodRange(period, custom), [period, custom]);
-  const data = useQuery(api.reports.summary, canView && from < to ? { from, to } : "skip");
+  const { range, search, from, to, setRange } = useReportRange();
+  const data = useQuery(api.reports.summary, canView ? { from, to } : "skip");
   const lifetime = useQuery(api.reports.lifetime, canView ? {} : "skip");
   const convex = useConvex();
   const [exporting, setExporting] = useState<string | null>(null);
@@ -66,23 +53,8 @@ export default function ReportsPage() {
       <div className="hidden lg:block">
         <PageTitle>Reports</PageTitle>
       </div>
-      <Segmented
-        label="Period"
-        value={period}
-        onChange={setPeriod}
-        className="mb-4 max-w-[420px]"
-        options={[
-          { value: "week", label: "This week" },
-          { value: "month", label: "This month" },
-          { value: "custom", label: "Custom" },
-        ]}
-      />
-      {period === "custom" && (
-        <div className="mb-4 grid max-w-[420px] grid-cols-2 gap-3">
-          <Input label="From" type="date" value={custom.from} onChange={(e) => setCustom({ ...custom, from: e.target.value })} />
-          <Input label="To" type="date" value={custom.to} onChange={(e) => setCustom({ ...custom, to: e.target.value })} />
-        </div>
-      )}
+      <DateRangePicker value={range} onChange={setRange} className="mb-4 w-full max-w-[420px]" />
+      <p className="-mt-2 mb-4 text-caption text-fg-3">Tap any card to see the full breakdown.</p>
 
       {!data ? (
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -93,32 +65,30 @@ export default function ReportsPage() {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Tile label="Collected" value={formatKes(data.collected)} sub={`${formatKes(data.deposits)} deposits`} />
-            <Tile label="Outstanding" value={formatKes(data.outstanding)} sub="on confirmed sessions" warn={data.outstanding > 0} />
-            <Tile label="Sessions completed" value={String(data.sessionsCompleted)} sub={`${data.sessionsBooked} booked`} />
-            <Tile
-              label="No-show rate"
+            <Tile search={search} metric="collected" label="Collected" value={formatKes(data.collected)} sub={`${formatKes(data.deposits)} deposits`} />
+            <Tile search={search} metric="outstanding" label="Outstanding" value={formatKes(data.outstanding)} sub="on confirmed sessions" warn={data.outstanding > 0} />
+            <Tile search={search} metric="sessions" label="Sessions completed" value={String(data.sessionsCompleted)} sub={`${data.sessionsBooked} booked`} />
+            <Tile search={search}               metric="no-shows" label="No-show rate"
               value={`${Math.round(data.noShowRate * 100)}%`}
               sub={`${data.noShows} no-show · ${data.cancellations} cancelled`}
             />
           </div>
 
           <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Tile
-              label="Net profit"
+            <Tile search={search}               metric="net-profit" label="Net profit"
               value={formatKes(data.netProfit)}
               sub={`${Math.round(data.profitMargin * 100)}% margin · ${formatKes(data.expensesTotal)} costs`}
               warn={data.netProfit < 0}
             />
-            <Tile label="Avg order value" value={formatKes(data.avgOrderValue)} sub={`${data.sessionsCompleted} completed`} />
-            <Tile label="Revenue / hour" value={formatKes(data.revenuePerHour)} sub="chair time, completed" />
-            <Tile label="New clients" value={String(data.newClients)} sub="first seen this period" />
+            <Tile search={search} metric="avg-order" label="Avg order value" value={formatKes(data.avgOrderValue)} sub={`${data.sessionsCompleted} completed`} />
+            <Tile search={search} metric="revenue-per-hour" label="Revenue / hour" value={formatKes(data.revenuePerHour)} sub="chair time, completed" />
+            <Tile search={search} metric="new-clients" label="New clients" value={String(data.newClients)} sub="first seen this period" />
           </div>
 
           <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Tile label="Tattoos done" value={String(data.tattoosDone)} sub={`${data.sessionsCompleted} sessions completed`} />
-            <Tile label="Avg price / tattoo" value={formatKes(data.avgPricePerTattoo)} sub="revenue ÷ tattoos done" />
-            <Tile label="Leads value" value={formatKes(data.leadsValue)} sub={`${data.leadsCount} open lead${data.leadsCount === 1 ? "" : "s"}`} />
+            <Tile search={search} metric="tattoos" label="Tattoos done" value={String(data.tattoosDone)} sub={`${data.sessionsCompleted} sessions completed`} />
+            <Tile search={search} metric="avg-price" label="Avg price / tattoo" value={formatKes(data.avgPricePerTattoo)} sub="revenue ÷ tattoos done" />
+            <Tile search={search} metric="leads" label="Leads value" value={formatKes(data.leadsValue)} sub={`${data.leadsCount} open lead${data.leadsCount === 1 ? "" : "s"}`} />
           </div>
 
           <Card className="mt-6">
@@ -231,13 +201,31 @@ export default function ReportsPage() {
   );
 }
 
-function Tile({ label, value, sub, warn }: { label: string; value: string; sub?: string; warn?: boolean }) {
+function Tile({
+  label,
+  value,
+  sub,
+  warn,
+  metric,
+  search,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  warn?: boolean;
+  metric: string;
+  search: string;
+}) {
   return (
-    <div className="rounded-lg border border-line bg-surface p-4 shadow-card">
-      <p className="text-caption text-fg-2">{label}</p>
+    <Link
+      href={`/reports/${metric}?${search}`}
+      className="tap group relative block rounded-lg border border-line bg-surface p-4 shadow-card transition-colors hover:border-line-strong hover:bg-hover"
+    >
+      <ChevronRight className="absolute top-4 right-3 size-4 text-fg-3 transition-transform group-hover:translate-x-0.5" aria-hidden />
+      <p className="pr-5 text-caption text-fg-2">{label}</p>
       <p className={`money mt-1 text-heading ${warn ? "text-warning" : ""}`}>{value}</p>
       {sub && <p className="mt-0.5 text-caption text-fg-3">{sub}</p>}
-    </div>
+    </Link>
   );
 }
 

@@ -139,6 +139,103 @@ export const summary = query({
 });
 
 /**
+ * The rows behind the summary tiles for [from, to): every session (whose tattoo, for how much),
+ * every payment, every expense, new clients and the open leads pipeline. Drives /reports/[metric].
+ */
+export const details = query({
+  args: { from: v.number(), to: v.number() },
+  handler: async (ctx, { from, to }) => {
+    await requirePermission(ctx, "reports.view");
+    const bookings = await ctx.db
+      .query("bookings")
+      .withIndex("by_start", (q) => q.gte("startAt", from).lt("startAt", to))
+      .collect();
+    const payments = await ctx.db
+      .query("payments")
+      .withIndex("by_paid_at", (q) => q.gte("paidAt", from).lt("paidAt", to))
+      .collect();
+    const expenses = await ctx.db
+      .query("expenses")
+      .withIndex("by_incurred_at", (q) => q.gte("incurredAt", from).lt("incurredAt", to))
+      .collect();
+
+    // Expenses linked to a session show whose session they were for.
+    const expenseBookingIds = [...new Set(expenses.flatMap((e) => (e.bookingId ? [e.bookingId] : [])))];
+    const expenseBookings = await Promise.all(expenseBookingIds.map((id) => ctx.db.get(id)));
+    const clientIdByBooking = new Map(
+      [...bookings, ...expenseBookings.flatMap((b) => (b ? [b] : []))].map((b) => [b._id, b.clientId] as const),
+    );
+
+    const clientIds = [...new Set([...bookings.map((b) => b.clientId), ...payments.map((p) => p.clientId), ...clientIdByBooking.values()])];
+    const clients = await Promise.all(clientIds.map((id) => ctx.db.get(id)));
+    const clientName = new Map(clients.flatMap((c) => (c ? [[c._id, c.fullName] as const] : [])));
+
+    const allClients = await ctx.db.query("clients").collect();
+    const newClients = allClients
+      .filter((c) => !c.archived && c._creationTime >= from && c._creationTime < to)
+      .sort((a, b) => b._creationTime - a._creationTime)
+      .map((c) => ({ _id: c._id, fullName: c.fullName, phone: c.phone, createdAt: c._creationTime }));
+
+    const openLeads = (await ctx.db.query("leads").collect())
+      .filter((l) => l.status === "new" || l.status === "contacted")
+      .sort((a, b) => (b.price ?? 0) - (a.price ?? 0))
+      .map((l) => ({ _id: l._id, name: l.name ?? l.instagram ?? l.phone ?? "Unnamed lead", status: l.status, price: l.price ?? 0, createdAt: l._creationTime }));
+
+    return {
+      sessions: bookings
+        .sort((a, b) => b.startAt - a.startAt)
+        .map((b) => ({
+          _id: b._id,
+          clientId: b.clientId,
+          clientName: clientName.get(b.clientId) ?? "Unknown client",
+          startAt: b.startAt,
+          durationMin: b.durationMin,
+          status: b.status,
+          venue: b.venue ?? "studio",
+          location: b.location,
+          tattooCount: b.tattooCount ?? 1,
+          finalPriceKes: b.finalPriceKes,
+          paidTotalKes: b.paidTotalKes,
+          balanceKes: Math.max(0, b.finalPriceKes - b.paidTotalKes),
+          depositOutcome: b.depositOutcome ?? null,
+        })),
+      payments: payments
+        .sort((a, b) => b.paidAt - a.paidAt)
+        .map((p) => ({
+          _id: p._id,
+          clientId: p.clientId,
+          clientName: clientName.get(p.clientId) ?? "Unknown client",
+          bookingId: p.bookingId ?? null,
+          type: p.type,
+          method: p.method,
+          amountKes: p.amountKes,
+          mpesaCode: p.mpesaCode ?? null,
+          paidAt: p.paidAt,
+        })),
+      expenses: expenses
+        .sort((a, b) => b.incurredAt - a.incurredAt)
+        .map((e) => {
+          const cid = e.bookingId ? clientIdByBooking.get(e.bookingId) : undefined;
+          return {
+            _id: e._id,
+            category: e.category,
+            categoryLabel: EXPENSE_CATEGORY_LABEL[e.category as ExpenseCategory] ?? e.category,
+            amountKes: e.amountKes,
+            incurredAt: e.incurredAt,
+            vendor: e.vendor ?? null,
+            note: e.note ?? null,
+            method: e.method ?? null,
+            bookingId: e.bookingId ?? null,
+            linkedClient: cid ? clientName.get(cid) ?? null : null,
+          };
+        }),
+      newClients,
+      openLeads,
+    };
+  },
+});
+
+/**
  * Lifetime (all-time) client economics — independent of the period selector.
  * LTV = average revenue collected per paying client; plus repeat rate and avg sessions per client.
  */
