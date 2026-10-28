@@ -34,6 +34,7 @@ import type * as messages from "../messages.js";
 import type * as payments from "../payments.js";
 import type * as promos from "../promos.js";
 import type * as public_ from "../public.js";
+import type * as reminders from "../reminders.js";
 import type * as reports from "../reports.js";
 import type * as settings from "../settings.js";
 import type * as sms from "../sms.js";
@@ -75,6 +76,7 @@ declare const fullApi: ApiFromModules<{
   payments: typeof payments;
   promos: typeof promos;
   public: typeof public_;
+  reminders: typeof reminders;
   reports: typeof reports;
   settings: typeof settings;
   sms: typeof sms;

@@ -1,8 +1,9 @@
 "use client";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { useConvex } from "convex/react";
+import { api } from "@drink/backend/api";
+import { useConvex, useQuery } from "convex/react";
 import {
-  BarChart3, CalendarDays, Home, ListChecks, LogOut, MessageSquare, MoreHorizontal, Plus, Settings, Tag, UserPlus, Users, Wallet,
+  BarChart3, Bell, CalendarDays, Home, ListChecks, LogOut, MessageSquare, MoreHorizontal, Plus, Settings, Tag, UserPlus, Users, Wallet,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -29,6 +30,7 @@ const NAV: NavItem[] = [
   { href: "/clients", label: "Clients", icon: Users },
   { href: "/leads", label: "Leads", icon: UserPlus, permission: "clients.edit" },
   { href: "/tasks", label: "Tasks", icon: ListChecks },
+  { href: "/reminders", label: "Reminders", icon: Bell },
   { href: "/messages", label: "Messages", icon: MessageSquare },
   { href: "/offers", label: "Offers", icon: Tag },
   { href: "/reports", label: "Reports", icon: BarChart3, permission: "reports.view" },
@@ -43,6 +45,7 @@ const TITLES: [RegExp, string][] = [
   [/^\/clients/, "Clients"],
   [/^\/leads/, "Leads"],
   [/^\/tasks/, "Tasks"],
+  [/^\/reminders/, "Reminders"],
   [/^\/bookings/, "Booking"],
   [/^\/messages/, "Messages"],
   [/^\/offers/, "Offers"],
@@ -93,6 +96,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     "expenses.manage": canExpenses,
     "clients.edit": canEditClients,
   };
+  const remindersDue = useQuery(api.reminders.dueCount, {}) ?? 0;
   const nav = NAV.filter((n) => !n.permission || grants[n.permission]);
   const title = TITLES.find(([re]) => re.test(path))?.[1] ?? "";
 
@@ -124,6 +128,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             >
               <n.icon className="size-[18px]" aria-hidden />
               {n.label}
+              {n.href === "/reminders" && <CountBadge n={remindersDue} />}
             </Link>
           ))}
         </nav>
@@ -185,10 +190,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               onClick={() => setMore(true)}
               className={cn(
                 "flex flex-1 flex-col items-center justify-center gap-1 text-caption font-medium",
-                ["/leads", "/tasks", "/messages", "/offers", "/reports", "/expenses", "/settings"].some((p) => path.startsWith(p)) ? "text-fg" : "text-fg-3",
+                ["/leads", "/tasks", "/reminders", "/messages", "/offers", "/reports", "/expenses", "/settings"].some((p) => path.startsWith(p)) ? "text-fg" : "text-fg-3",
               )}
             >
-              <MoreHorizontal className="size-[22px]" aria-hidden />
+              <span className="relative">
+                <MoreHorizontal className="size-[22px]" aria-hidden />
+                {remindersDue > 0 && <span className="absolute -top-0.5 -right-1 size-2 rounded-full bg-accent" aria-label={`${remindersDue} reminders due`} />}
+              </span>
               More
             </button>
           </div>
@@ -199,6 +207,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {nav.slice(3).map((n) => (
               <Link key={n.href} href={n.href} className="flex h-12 items-center gap-3 rounded-md px-2 font-medium hover:bg-hover">
                 <n.icon className="size-5 text-fg-2" aria-hidden /> {n.label}
+                {n.href === "/reminders" && <CountBadge n={remindersDue} />}
               </Link>
             ))}
             <button onClick={() => void signOut()} className="flex h-12 items-center gap-3 rounded-md px-2 text-left font-medium hover:bg-hover">
@@ -223,5 +232,14 @@ function Tab({ item, path }: { item: NavItem; path: string }) {
       {item.label}
       {active && <span className="absolute bottom-1.5 size-1 rounded-full bg-accent" aria-hidden />}
     </Link>
+  );
+}
+
+function CountBadge({ n }: { n: number }) {
+  if (n <= 0) return null;
+  return (
+    <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-caption font-semibold text-on-accent tabular">
+      {n}
+    </span>
   );
 }

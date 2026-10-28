@@ -221,6 +221,11 @@ export default defineSchema({
     scheduledJobs: v.array(v.id("_scheduled_functions")),
     createdBy: v.id("staff"),
     completedAt: v.optional(v.number()),
+    // + 7-day healing check-in (see reminders.ts): when the artist checked on the client, by whom,
+    // and how it's healing. Unset = not checked yet.
+    healCheckAt: v.optional(v.number()),
+    healCheckBy: v.optional(v.id("staff")),
+    healCheckNote: v.optional(v.string()),
   })
     .index("by_start", ["startAt"])
     .index("by_status_start", ["status", "startAt"])
